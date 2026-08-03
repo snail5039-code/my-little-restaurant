@@ -10,4 +10,13 @@ export type Restaurant = {
   name: string;
   food: string;
   created_at: string;
+  category_id: number | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  visited: boolean;
+  alone_ok: number | null;
+  rating: number | null;
+  memo: string | null;
+  user_id: string | null;
 };
