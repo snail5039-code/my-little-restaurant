@@ -57,6 +57,7 @@ export default function RestaurantsView({
           name: r.name,
           lat: r.lat!,
           lng: r.lng!,
+          category: r.category,
           memo: r.memo,
         })),
     [filtered]

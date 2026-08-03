@@ -8,6 +8,7 @@ export type MapMarker = {
   name: string;
   lat: number;
   lng: number;
+  category?: string;
   memo?: string | null;
 };
 
@@ -39,12 +40,15 @@ const CURRENT_LOCATION_IMAGE =
     </svg>`
   );
 
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+const INFO_WINDOW_WIDTH = 200;
+
+// 인포윈도우 상자 비율이 내용 길이에 따라 들쭥날쭥해지지 않도록, 줄바꿈 대신
+// 한 줄로 자르고 ...으로 표시한다.
+function applySingleLineEllipsis(el: HTMLElement) {
+  el.style.width = "100%";
+  el.style.whiteSpace = "nowrap";
+  el.style.overflow = "hidden";
+  el.style.textOverflow = "ellipsis";
 }
 
 export default function KakaoMap({
@@ -99,23 +103,56 @@ export default function KakaoMap({
         const position = new kakao.maps.LatLng(marker.lat, marker.lng);
         const kakaoMarker = new kakao.maps.Marker({ position, map });
 
-        const memoHtml = marker.memo
-          ? `<p style="margin:4px 0 0;font-size:12px;color:#78716c;max-width:180px;white-space:normal;">${escapeHtml(
-              marker.memo
-            )}</p>`
-          : "";
+        // 일정한 비율로 보이도록 고정 폭 카드 형태로 구성한다.
+        const content = document.createElement("div");
+        content.style.padding = "10px 12px";
+        content.style.fontSize = "13px";
+        content.style.width = `${INFO_WINDOW_WIDTH}px`;
 
-        const infowindow = new kakao.maps.InfoWindow({
-          content: `
-            <div style="padding:8px 12px;font-size:13px;">
-              <strong style="display:block;">${escapeHtml(marker.name)}</strong>
-              ${memoHtml}
-              <a href="/restaurants/${marker.id}" style="display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:#d24d17;text-decoration:underline;">
-                상세보기 →
-              </a>
-            </div>
-          `,
-        });
+        const nameEl = document.createElement("strong");
+        nameEl.style.display = "block";
+        applySingleLineEllipsis(nameEl);
+        nameEl.textContent = marker.name;
+        nameEl.title = marker.name;
+        content.appendChild(nameEl);
+
+        if (marker.category) {
+          const categoryEl = document.createElement("span");
+          categoryEl.style.display = "inline-block";
+          categoryEl.style.marginTop = "3px";
+          categoryEl.style.padding = "1px 6px";
+          categoryEl.style.borderRadius = "9999px";
+          categoryEl.style.background = "#d24d1719";
+          categoryEl.style.color = "#d24d17";
+          categoryEl.style.fontSize = "10px";
+          categoryEl.style.fontWeight = "600";
+          categoryEl.textContent = marker.category;
+          content.appendChild(categoryEl);
+        }
+
+        if (marker.memo) {
+          const memoEl = document.createElement("p");
+          memoEl.style.margin = "4px 0 0";
+          memoEl.style.fontSize = "12px";
+          memoEl.style.color = "#78716c";
+          applySingleLineEllipsis(memoEl);
+          memoEl.textContent = marker.memo;
+          memoEl.title = marker.memo;
+          content.appendChild(memoEl);
+        }
+
+        const linkEl = document.createElement("a");
+        linkEl.href = `/restaurants/${marker.id}`;
+        linkEl.textContent = "상세보기 →";
+        linkEl.style.display = "inline-block";
+        linkEl.style.marginTop = "6px";
+        linkEl.style.fontSize = "12px";
+        linkEl.style.fontWeight = "600";
+        linkEl.style.color = "#d24d17";
+        linkEl.style.textDecoration = "underline";
+        content.appendChild(linkEl);
+
+        const infowindow = new kakao.maps.InfoWindow({ content });
 
         kakao.maps.event.addListener(kakaoMarker, "click", () => {
           toggleInfoWindow(infowindow, kakaoMarker);
@@ -138,17 +175,20 @@ export default function KakaoMap({
         // 등록 버튼은 실제 클릭 핸들러가 필요해서 문자열 대신 DOM 엘리먼트로
         // 인포윈도우 내용을 구성한다 (문자열 content엔 이벤트를 못 붙인다).
         const content = document.createElement("div");
-        content.style.padding = "8px 12px";
+        content.style.padding = "10px 12px";
         content.style.fontSize = "13px";
+        content.style.width = `${INFO_WINDOW_WIDTH}px`;
 
         const nameEl = document.createElement("strong");
         nameEl.style.display = "block";
+        applySingleLineEllipsis(nameEl);
         nameEl.textContent = marker.name;
+        nameEl.title = marker.name;
         content.appendChild(nameEl);
 
         const badgeEl = document.createElement("span");
         badgeEl.style.display = "inline-block";
-        badgeEl.style.marginTop = "2px";
+        badgeEl.style.marginTop = "3px";
         badgeEl.style.padding = "1px 6px";
         badgeEl.style.borderRadius = "9999px";
         badgeEl.style.background = "#05966922";
@@ -164,6 +204,7 @@ export default function KakaoMap({
           foodTypeEl.style.fontSize = "12px";
           foodTypeEl.style.color = "#059669";
           foodTypeEl.style.fontWeight = "600";
+          applySingleLineEllipsis(foodTypeEl);
           foodTypeEl.textContent = marker.foodType;
           content.appendChild(foodTypeEl);
         }
@@ -173,9 +214,9 @@ export default function KakaoMap({
           addressEl.style.margin = "4px 0 0";
           addressEl.style.fontSize = "12px";
           addressEl.style.color = "#78716c";
-          addressEl.style.maxWidth = "200px";
-          addressEl.style.whiteSpace = "normal";
+          applySingleLineEllipsis(addressEl);
           addressEl.textContent = marker.address;
+          addressEl.title = marker.address;
           content.appendChild(addressEl);
         }
 

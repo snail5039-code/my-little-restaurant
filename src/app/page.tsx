@@ -33,54 +33,58 @@ export default async function Home() {
     (user?.user_metadata?.name as string | undefined) ??
     null;
 
-  // 리스트 미리보기는 로그인한 사용자 본인의 데이터만 보여준다.
-  // 즐겨찾기한 곳이 있으면 그걸, 없으면 직접 등록한 곳 중 최신 것을 보여주고
-  // 둘 다 없으면(신규 유저·비로그인) 미리보기 자체를 숨긴다.
-  let previewRestaurant: Restaurant | null = null;
+  // 리스트 미리보기는 로그인한 사용자 본인의 데이터만, 최대 3개까지 보여준다.
+  // 즐겨찾기한 곳을 먼저 채우고, 3개가 안 되면 직접 등록한 곳(중복 제외)으로
+  // 채운다. 둘 다 없으면(신규 유저·비로그인) 미리보기 자체를 숨긴다.
+  const PREVIEW_COUNT = 3;
+  let previewRestaurants: Restaurant[] = [];
   let categories: { id: number; name: string }[] = [];
   if (user) {
-    const [{ data: favRow }, { data: categoryRows }] = await Promise.all([
+    const [{ data: favRows }, { data: categoryRows }] = await Promise.all([
       supabase
         .from("favorites")
         .select("restaurants(*)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(PREVIEW_COUNT),
       supabase.from("categories").select("id, name").order("id"),
     ]);
     categories = categoryRows ?? [];
-    previewRestaurant =
-      (favRow?.restaurants as unknown as Restaurant | null) ?? null;
+    previewRestaurants = (favRows ?? [])
+      .map((row) => row.restaurants as unknown as Restaurant | null)
+      .filter((r): r is Restaurant => r !== null);
 
-    if (!previewRestaurant) {
-      const { data: ownRow } = await supabase
+    const remaining = PREVIEW_COUNT - previewRestaurants.length;
+    if (remaining > 0) {
+      const excludeIds = previewRestaurants.map((r) => r.id);
+      let ownQuery = supabase
         .from("restaurants")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      previewRestaurant = ownRow ?? null;
+        .limit(remaining);
+      if (excludeIds.length > 0) {
+        ownQuery = ownQuery.not("id", "in", `(${excludeIds.join(",")})`);
+      }
+      const { data: ownRows } = await ownQuery;
+      previewRestaurants = [...previewRestaurants, ...(ownRows ?? [])];
     }
   }
 
-  const previewCard = previewRestaurant
-    ? {
-        id: (previewRestaurant as Restaurant).id,
-        name: (previewRestaurant as Restaurant).name,
-        category: (previewRestaurant as Restaurant).food,
-        categoryId: (previewRestaurant as Restaurant).category_id,
-        address: (previewRestaurant as Restaurant).address ?? undefined,
-        rating: (previewRestaurant as Restaurant).rating ?? undefined,
-        aloneOk: (previewRestaurant as Restaurant).alone_ok ?? undefined,
-        memo: (previewRestaurant as Restaurant).memo,
-        visited: (previewRestaurant as Restaurant).visited,
-        ownerId: (previewRestaurant as Restaurant).user_id,
-        imageUrl: (previewRestaurant as Restaurant).image_url,
-      }
-    : null;
+  const previewCards = previewRestaurants.map((r) => ({
+    id: r.id,
+    name: r.name,
+    category: r.food,
+    categoryId: r.category_id,
+    address: r.address ?? undefined,
+    rating: r.rating ?? undefined,
+    aloneOk: r.alone_ok ?? undefined,
+    memo: r.memo,
+    visited: r.visited,
+    ownerId: r.user_id,
+    imageUrl: r.image_url,
+  }));
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 md:px-8 md:py-16">
@@ -123,7 +127,7 @@ export default async function Home() {
       </section>
 
       {/* 카드 미리보기 — 내가 즐겨찾기했거나 등록한 가게로 리스트가 어떻게 보이는지 보여준다 */}
-      {previewCard && (
+      {previewCards.length > 0 && (
         <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
@@ -136,13 +140,16 @@ export default async function Home() {
               전체 리스트 보기
             </Link>
           </div>
-          <div className="mt-3 max-w-md">
-            <RestaurantCard
-              {...previewCard}
-              categories={categories ?? []}
-              isLoggedIn={!!user}
-              isOwner={!!user && previewCard.ownerId === user.id}
-            />
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {previewCards.map((card) => (
+              <RestaurantCard
+                key={card.id}
+                {...card}
+                categories={categories ?? []}
+                isLoggedIn={!!user}
+                isOwner={!!user && card.ownerId === user.id}
+              />
+            ))}
           </div>
         </section>
       )}
