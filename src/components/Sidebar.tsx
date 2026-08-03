@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, UtensilsCrossed, CircleUserRound } from "lucide-react";
 import AuthStatus from "./AuthStatus";
 
 const NAV_ITEMS = [
-  { href: "/", label: "홈" },
-  { href: "/restaurants", label: "맛집 리스트" },
-  { href: "/mypage", label: "마이페이지" },
+  { href: "/", label: "홈", icon: Home },
+  { href: "/restaurants", label: "맛집 리스트", icon: UtensilsCrossed },
+  { href: "/mypage", label: "마이페이지", icon: CircleUserRound },
 ];
 
 export default function Sidebar() {
@@ -28,12 +29,13 @@ export default function Sidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               isActive
                 ? "bg-orange-500 text-white"
                 : "text-neutral-700 hover:bg-orange-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
             }`}
           >
+            <item.icon className="h-4 w-4" />
             {item.label}
           </Link>
         );

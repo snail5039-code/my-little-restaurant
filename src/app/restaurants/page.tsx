@@ -1,11 +1,21 @@
 import { supabase, type Restaurant } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import RestaurantsView from "@/components/RestaurantsView";
 
 export default async function RestaurantsPage() {
-  const { data: restaurants, error } = await supabase
-    .from("restaurants")
-    .select("*")
-    .order("id");
+  const supabaseServer = await createClient();
+
+  const [
+    { data: restaurants, error },
+    { data: categories },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
+    supabase.from("restaurants").select("*").order("id"),
+    supabase.from("categories").select("id, name").order("id"),
+    supabaseServer.auth.getUser(),
+  ]);
 
   const cards = (restaurants ?? []).map((restaurant: Restaurant) => ({
     id: restaurant.id,
@@ -14,8 +24,10 @@ export default async function RestaurantsPage() {
     address: restaurant.address ?? undefined,
     rating: restaurant.rating ?? undefined,
     aloneOk: restaurant.alone_ok ?? undefined,
+    memo: restaurant.memo,
     lat: restaurant.latitude ?? undefined,
     lng: restaurant.longitude ?? undefined,
+    ownerId: restaurant.user_id,
   }));
 
   return (
@@ -28,7 +40,12 @@ export default async function RestaurantsPage() {
         <p className="text-red-500">목록을 불러오지 못했습니다: {error.message}</p>
       )}
 
-      <RestaurantsView restaurants={cards} />
+      <RestaurantsView
+        restaurants={cards}
+        categories={categories ?? []}
+        isLoggedIn={!!user}
+        currentUserId={user?.id ?? null}
+      />
     </main>
   );
 }

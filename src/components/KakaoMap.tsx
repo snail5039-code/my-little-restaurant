@@ -2,12 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
-
 export type MapMarker = {
   id: number | string;
   name: string;
@@ -25,27 +19,30 @@ export default function KakaoMap({ markers }: { markers: MapMarker[] }) {
     if (!appkey || !mapRef.current) return;
 
     const initMap = () => {
-      window.kakao.maps.load(() => {
+      const kakao = window.kakao;
+      if (!kakao) return;
+
+      kakao.maps.load(() => {
         if (!mapRef.current) return;
 
         const center = markers.length
-          ? new window.kakao.maps.LatLng(markers[0].lat, markers[0].lng)
-          : new window.kakao.maps.LatLng(37.5665, 126.978);
+          ? new kakao.maps.LatLng(markers[0].lat, markers[0].lng)
+          : new kakao.maps.LatLng(37.5665, 126.978);
 
-        const map = new window.kakao.maps.Map(mapRef.current, {
+        const map = new kakao.maps.Map(mapRef.current, {
           center,
           level: 6,
         });
 
         markers.forEach((marker) => {
-          const position = new window.kakao.maps.LatLng(marker.lat, marker.lng);
-          const kakaoMarker = new window.kakao.maps.Marker({ position, map });
+          const position = new kakao.maps.LatLng(marker.lat, marker.lng);
+          const kakaoMarker = new kakao.maps.Marker({ position, map });
 
-          const infowindow = new window.kakao.maps.InfoWindow({
+          const infowindow = new kakao.maps.InfoWindow({
             content: `<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">${marker.name}</div>`,
           });
 
-          window.kakao.maps.event.addListener(kakaoMarker, "click", () => {
+          kakao.maps.event.addListener(kakaoMarker, "click", () => {
             infowindow.open(map, kakaoMarker);
           });
         });

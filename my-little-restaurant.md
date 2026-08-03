@@ -161,9 +161,17 @@
 - 카카오 + 구글 소셜 로그인 (Supabase Auth, `@supabase/ssr`) — 로그인 시 `handle_new_user` 트리거로 profiles row 자동 생성, `/mypage`는 로그인 필요
   - Kakao: Kakao Developers 앱의 카카오 로그인 활성화, 동의항목(닉네임/프로필사진) 필수 설정, Redirect URI 등록 완료
   - Google: GCP 프로젝트 "my-little-restaurant" 생성, OAuth 동의화면 설정 후 **프로덕션으로 게시 완료** (테스트 사용자 제한 없음, 민감 스코프 미사용이라 검증 불필요)
+- Vercel 환경변수에 `NEXT_PUBLIC_KAKAO_MAP_KEY` 등록 완료 (Production, Preview) — 다음 배포부터 지도 표시됨
+- UI 아이콘 정리: 이모지 대신 `lucide-react` 라이브러리 아이콘으로 교체 (랜딩/사이드바/카드/상세/마이페이지 전반)
+- 로그인 가드: `/mypage` 미로그인 시 안내 문구 + 로그인 버튼만 노출, `맛집 등록` 버튼도 미로그인 시 비활성 안내로 대체
+- 쓰기(write) 기능 1차 구현
+  - 맛집 등록: `/restaurants`의 "맛집 등록" 모달 (`RegisterRestaurantModal.tsx`) — 이름/카테고리/주소/혼밥난이도/메모 입력, 주소는 카카오 Geocoder로 좌표 자동 변환 후 저장
+  - 메모 수정: 맛집 카드에서 본인이 등록한 가게만 인라인으로 메모 수정 가능 (RLS로 소유자만 UPDATE 허용)
+  - 마이페이지: 실제 로그인 사용자의 방문 수(등록한 가게 중 `visited=true`)/즐겨찾기 수/즐겨찾기 목록을 Supabase에서 조회해 표시, 닉네임·전화번호 수정 폼 실제 반영 (`src/app/restaurants/actions.ts`, `src/app/mypage/actions.ts`의 Server Action)
 
 **남은 것 / 다음 세션 시작점**
-- ⚠️ Vercel 환경변수에 `NEXT_PUBLIC_KAKAO_MAP_KEY` 아직 미등록 — 로컬 `.env.local`에만 있음. 배포본에서 지도가 안 뜨면 이것부터 확인
-- 마이페이지(`/mypage`)가 아직 실제 로그인 사용자 데이터(즐겨찾기, 방문 수, 프로필 수정)를 연동하지 않고 정적 placeholder 상태
-- 리뷰 작성, 즐겨찾기 토글, 맛집 등록 폼 등 쓰기(write) 기능 전반 미구현 (지금까지는 조회 위주)
+- 즐겨찾기(하트) 토글 버튼 자체는 아직 없음 — 마이페이지는 데이터를 읽어오지만, 카드/상세에서 즐겨찾기를 누르는 UI는 미구현
+- 리뷰 작성 폼 미구현 (상세 페이지는 리뷰 조회만 가능)
+- 방문 여부(`visited`) 토글 UI 없음 — DB 컬럼은 있지만 사용자가 직접 체크할 방법이 아직 없음
 - 사진 업로드(Supabase Storage), 친구 팔로우, 댓글은 기획 단계에서도 "차후 구현"으로 분류됨 (6번 항목 참고)
+- 이번 세션에서는 다른 세션이 로컬 dev 서버(포트 3000)를 점유하고 있어 브라우저로 직접 클릭 테스트는 못 했음 — `npm run build` 통과는 확인함. 다음에 열 때 실제 로그인 → 등록 → 메모 수정 플로우 한 번 확인 필요

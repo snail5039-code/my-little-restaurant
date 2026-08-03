@@ -1,4 +1,12 @@
 import { notFound } from "next/navigation";
+import {
+  UtensilsCrossed,
+  CheckCircle2,
+  Clock,
+  Heart,
+  UserRound,
+  Star,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default async function RestaurantDetailPage({
@@ -41,8 +49,8 @@ export default async function RestaurantDetailPage({
   return (
     <main className="flex flex-1 flex-col gap-6 p-8">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex h-56 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-200 to-red-300 text-7xl dark:from-orange-900 dark:to-red-900">
-          🍽️
+        <div className="flex h-56 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-200 to-red-300 text-orange-900 dark:from-orange-900 dark:to-red-900 dark:text-orange-200">
+          <UtensilsCrossed className="h-16 w-16" strokeWidth={1.5} />
         </div>
 
         <div className="flex flex-col gap-4">
@@ -65,10 +73,26 @@ export default async function RestaurantDetailPage({
           </div>
 
           <div className="flex flex-col gap-2 rounded-2xl bg-white p-5 text-sm shadow-sm dark:bg-neutral-900">
-            <span>{restaurant.visited ? "✅ 방문 완료" : "🕓 아직 안 가봄"}</span>
-            <span>❤️ 좋아요 {favoriteCount ?? 0}</span>
+            <span className="flex items-center gap-1.5">
+              {restaurant.visited ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-500" /> 방문 완료
+                </>
+              ) : (
+                <>
+                  <Clock className="h-4 w-4 text-neutral-400" /> 아직 안 가봄
+                </>
+              )}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Heart className="h-4 w-4 fill-red-400 text-red-400" /> 좋아요{" "}
+              {favoriteCount ?? 0}
+            </span>
             {restaurant.alone_ok !== null && (
-              <span>🧍 혼밥 난이도 {restaurant.alone_ok}/5</span>
+              <span className="flex items-center gap-1.5">
+                <UserRound className="h-4 w-4 text-neutral-400" /> 혼밥 난이도{" "}
+                {restaurant.alone_ok}/5
+              </span>
             )}
           </div>
         </div>
@@ -79,7 +103,7 @@ export default async function RestaurantDetailPage({
           평점
         </span>
         <div className="mt-1 flex items-center gap-1">
-          <span className="text-orange-500">★</span>
+          <Star className="h-4 w-4 fill-orange-500 text-orange-500" />
           <span className="font-semibold text-neutral-900 dark:text-neutral-50">
             {restaurant.rating !== null ? restaurant.rating.toFixed(1) : "아직 평점 없음"}
           </span>
@@ -99,8 +123,9 @@ export default async function RestaurantDetailPage({
                   className="rounded-xl bg-neutral-50 p-3 text-sm dark:bg-neutral-800"
                 >
                   {review.rating !== null && (
-                    <span className="mr-2 text-orange-500">
-                      ★ {review.rating.toFixed(1)}
+                    <span className="mr-2 inline-flex items-center gap-1 text-orange-500">
+                      <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
+                      {review.rating.toFixed(1)}
                     </span>
                   )}
                   {review.content}
@@ -123,8 +148,10 @@ export default async function RestaurantDetailPage({
                   key={item.id}
                   className="flex items-center justify-between text-sm"
                 >
-                  <span>
-                    {item.is_representative && "⭐ "}
+                  <span className="inline-flex items-center gap-1.5">
+                    {item.is_representative && (
+                      <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
+                    )}
                     {item.name}
                   </span>
                   {item.price !== null && (

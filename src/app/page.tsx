@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UtensilsCrossed } from "lucide-react";
 import OAuthLoginButton from "@/components/OAuthLoginButton";
 
 const STEPS = [
@@ -30,8 +31,8 @@ export default function Home() {
 
       <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="flex flex-col justify-center gap-6 rounded-2xl bg-white p-10 shadow-sm dark:bg-neutral-900">
-          <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-300 to-red-400 text-6xl">
-            🍜
+          <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-300 to-red-400 text-white">
+            <UtensilsCrossed className="h-16 w-16" strokeWidth={1.5} />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">
