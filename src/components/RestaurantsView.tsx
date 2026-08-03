@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Map as MapIcon, LayoutGrid, Search, SearchX } from "lucide-react";
 import RestaurantCard, { type RestaurantCardData } from "./RestaurantCard";
 import KakaoMap, { type CertifiedMapMarker } from "./KakaoMap";
-import RegisterRestaurantModal from "./RegisterRestaurantModal";
+import RegisterRestaurantModal, {
+  type RegisterRestaurantModalHandle,
+} from "./RegisterRestaurantModal";
 import RecommendModal from "./RecommendModal";
 import NearbyModelRestaurantSearch from "./NearbyModelRestaurantSearch";
 
@@ -32,6 +34,7 @@ export default function RestaurantsView({
   const [certifiedMarkers, setCertifiedMarkers] = useState<CertifiedMapMarker[]>(
     []
   );
+  const registerModalRef = useRef<RegisterRestaurantModalHandle>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -85,8 +88,10 @@ export default function RestaurantsView({
           isLoggedIn={isLoggedIn}
         />
         <RegisterRestaurantModal
+          ref={registerModalRef}
           categories={categories}
           isLoggedIn={isLoggedIn}
+          userId={currentUserId}
         />
       </div>
 
@@ -182,7 +187,19 @@ export default function RestaurantsView({
         <div className="flex flex-col gap-2">
           <NearbyModelRestaurantSearch onResults={setCertifiedMarkers} />
           <div className="overflow-hidden rounded-lg border border-line">
-            <KakaoMap markers={markers} certifiedMarkers={certifiedMarkers} />
+            <KakaoMap
+              markers={markers}
+              certifiedMarkers={certifiedMarkers}
+              onRegisterCertified={(marker) =>
+                registerModalRef.current?.openWithPrefill({
+                  name: marker.name,
+                  address: marker.address,
+                  foodType: marker.foodType,
+                  lat: marker.lat,
+                  lng: marker.lng,
+                })
+              }
+            />
           </div>
         </div>
       )}

@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Pencil, X, MapPin, Loader2, Check } from "lucide-react";
+import { Pencil, X, MapPin, Loader2, Check, ImagePlus } from "lucide-react";
 import { updateRestaurant, type ActionState } from "@/app/restaurants/actions";
 import { loadKakaoMaps } from "@/lib/kakao";
+import { createClient } from "@/lib/supabase/client";
 import CoordPickerMap from "./CoordPickerMap";
 
 const FIELD_CLASS =
   "w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand";
 const LABEL_CLASS =
   "text-[11px] font-semibold uppercase tracking-wide text-muted";
+const MAX_PHOTO_SIZE = 8 * 1024 * 1024; // 8MB
 
 export type EditableRestaurant = {
   id: number | string;
@@ -20,6 +22,8 @@ export type EditableRestaurant = {
   memo?: string | null;
   lat?: number | null;
   lng?: number | null;
+  imageUrl?: string | null;
+  ownerId?: string | null;
 };
 
 export default function EditRestaurantModal({
@@ -41,8 +45,41 @@ export default function EditRestaurantModal({
   );
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeMsg, setGeocodeMsg] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(
+    restaurant.imageUrl ?? null
+  );
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_PHOTO_SIZE) {
+      setUploadError("사진은 8MB 이하만 첨부할 수 있어요.");
+      return;
+    }
+    setUploadError(null);
+    setPhotoFile(file);
+    setPhotoRemoved(false);
+    setPhotoPreview((prev) => {
+      if (prev && prev !== restaurant.imageUrl) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoRemoved(true);
+    setPhotoPreview((prev) => {
+      if (prev && prev !== restaurant.imageUrl) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -66,6 +103,33 @@ export default function EditRestaurantModal({
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
+      if (photoFile) {
+        if (!restaurant.ownerId) {
+          setUploadError("로그인 정보를 확인하지 못했어요.");
+          return;
+        }
+        setUploading(true);
+        const supabaseBrowser = createClient();
+        const ext = photoFile.name.split(".").pop() ?? "jpg";
+        const path = `${restaurant.ownerId}/${Math.random().toString(36).slice(2)}-${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabaseBrowser.storage
+          .from("restaurant-images")
+          .upload(path, photoFile);
+        setUploading(false);
+        if (uploadErr) {
+          setUploadError(`사진 업로드에 실패했어요: ${uploadErr.message}`);
+          return;
+        }
+        const { data } = supabaseBrowser.storage
+          .from("restaurant-images")
+          .getPublicUrl(path);
+        formData.set("image_url", data.publicUrl);
+      } else if (photoRemoved) {
+        formData.set("image_url", "");
+      } else {
+        formData.set("image_url", restaurant.imageUrl ?? "");
+      }
+
       const result = await updateRestaurant({}, formData);
       setState(result);
       if (result.success) {
@@ -174,6 +238,42 @@ export default function EditRestaurantModal({
                   className={FIELD_CLASS}
                 />
               </label>
+
+              <div className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>사진 (선택)</span>
+                {photoPreview ? (
+                  <div className="group relative h-28 w-28 overflow-hidden rounded-md border border-line">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 업로드 전 로컬 미리보기 또는 기존 사진 */}
+                    <img
+                      src={photoPreview}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      aria-label="사진 제거"
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-2 text-xs font-semibold text-muted transition-colors hover:border-brand hover:text-brand">
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    사진 추가
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                {uploadError && (
+                  <span className="text-[11px] text-red-500">{uploadError}</span>
+                )}
+              </div>
 
               <label className="flex flex-col gap-1.5">
                 <span className={LABEL_CLASS}>카테고리</span>
@@ -300,7 +400,7 @@ export default function EditRestaurantModal({
                   className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-60"
                 >
                   {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  저장하기
+                  {uploading ? "업로드 중..." : "저장하기"}
                 </button>
               </div>
             </form>

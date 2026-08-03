@@ -77,7 +77,9 @@ declare global {
       image?: KakaoMarkerImage;
       zIndex?: number;
     }) => KakaoMarker;
-    InfoWindow: new (options: { content: string }) => KakaoInfoWindow;
+    InfoWindow: new (options: {
+      content: string | HTMLElement;
+    }) => KakaoInfoWindow;
     event: {
       addListener(
         target: KakaoMarker | KakaoMapInstance,

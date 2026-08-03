@@ -110,8 +110,17 @@ export default async function RestaurantDetailPage({
 
       {/* 헤더 */}
       <header className="overflow-hidden rounded-lg border border-line bg-surface">
-        <div className="relative flex h-40 items-center justify-center border-b border-line bg-surface-muted sm:h-52">
-          <CategoryIcon className="h-12 w-12 text-muted" strokeWidth={1.2} />
+        <div className="relative flex h-40 items-center justify-center overflow-hidden border-b border-line bg-surface-muted sm:h-52">
+          {restaurant.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage 공개 URL
+            <img
+              src={restaurant.image_url}
+              alt={restaurant.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <CategoryIcon className="h-12 w-12 text-muted" strokeWidth={1.2} />
+          )}
           <div className="absolute right-3 top-3 flex items-center gap-2">
             {isOwner && (
               <VisitedToggle restaurantId={restaurant.id} initialVisited={restaurant.visited} />
@@ -128,6 +137,8 @@ export default async function RestaurantDetailPage({
                   memo: restaurant.memo,
                   lat: restaurant.latitude,
                   lng: restaurant.longitude,
+                  imageUrl: restaurant.image_url,
+                  ownerId: restaurant.user_id,
                 }}
                 categories={categories ?? []}
               />
@@ -233,6 +244,19 @@ export default async function RestaurantDetailPage({
                       {review.content}
                     </p>
                   )}
+                  {review.image_urls && review.image_urls.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {review.image_urls.map((url: string) => (
+                        // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage 공개 URL
+                        <img
+                          key={url}
+                          src={url}
+                          alt=""
+                          className="h-16 w-16 rounded-md border border-line object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -241,7 +265,11 @@ export default async function RestaurantDetailPage({
               아직 리뷰가 없어요.
             </p>
           )}
-          <ReviewForm restaurantId={restaurant.id} isLoggedIn={isLoggedIn} />
+          <ReviewForm
+            restaurantId={restaurant.id}
+            isLoggedIn={isLoggedIn}
+            userId={user?.id}
+          />
         </section>
 
         {/* 댓글 */}

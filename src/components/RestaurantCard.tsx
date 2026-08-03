@@ -39,6 +39,7 @@ export type RestaurantCardData = {
   lat?: number;
   lng?: number;
   ownerId?: string | null;
+  imageUrl?: string | null;
 };
 
 export default function RestaurantCard({
@@ -55,6 +56,8 @@ export default function RestaurantCard({
   isFavorited,
   lat,
   lng,
+  ownerId,
+  imageUrl,
   isOwner,
   isLoggedIn,
   categories,
@@ -149,6 +152,8 @@ export default function RestaurantCard({
               memo,
               lat,
               lng,
+              imageUrl,
+              ownerId,
             }}
             categories={categories}
           />
@@ -176,8 +181,13 @@ export default function RestaurantCard({
       />
 
       <Link href={`/restaurants/${id}`} className="flex gap-3.5 p-3.5">
-        <div className="relative flex h-[86px] w-[86px] shrink-0 items-center justify-center rounded-md border border-line bg-surface-muted text-muted">
-          <CategoryIcon className="h-7 w-7" strokeWidth={1.4} />
+        <div className="relative flex h-[86px] w-[86px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-line bg-surface-muted text-muted">
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage 공개 URL
+            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <CategoryIcon className="h-7 w-7" strokeWidth={1.4} />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">

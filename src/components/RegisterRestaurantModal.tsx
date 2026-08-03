@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Plus, X, MapPin, Loader2, Check } from "lucide-react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { Plus, X, MapPin, Loader2, Check, ImagePlus } from "lucide-react";
 import { createRestaurant, type ActionState } from "@/app/restaurants/actions";
 import { loadKakaoMaps } from "@/lib/kakao";
+import { createClient } from "@/lib/supabase/client";
 import LoginRequiredModal from "./LoginRequiredModal";
 import CoordPickerMap from "./CoordPickerMap";
 
@@ -11,15 +19,30 @@ const FIELD_CLASS =
   "w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand";
 const LABEL_CLASS =
   "text-[11px] font-semibold uppercase tracking-wide text-muted";
+const MAX_PHOTO_SIZE = 8 * 1024 * 1024; // 8MB
 
-export default function RegisterRestaurantModal({
-  categories,
-  isLoggedIn,
-}: {
-  categories: { id: number; name: string }[];
-  isLoggedIn: boolean;
-}) {
+export type RegisterPrefill = {
+  name: string;
+  address?: string;
+  foodType?: string;
+  lat?: number;
+  lng?: number;
+};
+
+export type RegisterRestaurantModalHandle = {
+  openWithPrefill: (prefill: RegisterPrefill) => void;
+};
+
+const RegisterRestaurantModal = forwardRef<
+  RegisterRestaurantModalHandle,
+  {
+    categories: { id: number; name: string }[];
+    isLoggedIn: boolean;
+    userId?: string | null;
+  }
+>(function RegisterRestaurantModal({ categories, isLoggedIn, userId }, ref) {
   const [open, setOpen] = useState(false);
+  const [prefill, setPrefill] = useState<RegisterPrefill | null>(null);
   const [state, setState] = useState<ActionState>({});
   const [isPending, startTransition] = useTransition();
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
@@ -27,8 +50,59 @@ export default function RegisterRestaurantModal({
   );
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeMsg, setGeocodeMsg] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_PHOTO_SIZE) {
+      setUploadError("사진은 8MB 이하만 첨부할 수 있어요.");
+      return;
+    }
+    setUploadError(null);
+    setPhotoFile(file);
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
+  useImperativeHandle(ref, () => ({
+    openWithPrefill: (next) => {
+      setPrefill(next);
+      setCoords(
+        next.lat != null && next.lng != null
+          ? { lat: next.lat, lng: next.lng }
+          : null
+      );
+      setGeocodeMsg(
+        next.lat != null && next.lng != null
+          ? "지도에 표시된 위치의 좌표를 그대로 사용해요."
+          : null
+      );
+      setOpen(true);
+    },
+  }));
 
   const showForm = open && isLoggedIn;
 
@@ -50,16 +124,44 @@ export default function RegisterRestaurantModal({
     setOpen(false);
     setState({});
     setGeocodeMsg(null);
+    setPrefill(null);
+    removePhoto();
+    setUploadError(null);
   };
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
+      if (photoFile) {
+        if (!userId) {
+          setUploadError("로그인 정보를 확인하지 못했어요.");
+          return;
+        }
+        setUploading(true);
+        const supabaseBrowser = createClient();
+        const ext = photoFile.name.split(".").pop() ?? "jpg";
+        const path = `${userId}/${Math.random().toString(36).slice(2)}-${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabaseBrowser.storage
+          .from("restaurant-images")
+          .upload(path, photoFile);
+        setUploading(false);
+        if (uploadErr) {
+          setUploadError(`사진 업로드에 실패했어요: ${uploadErr.message}`);
+          return;
+        }
+        const { data } = supabaseBrowser.storage
+          .from("restaurant-images")
+          .getPublicUrl(path);
+        formData.set("image_url", data.publicUrl);
+      }
+
       const result = await createRestaurant({}, formData);
       setState(result);
       if (result.success) {
         formRef.current?.reset();
         setCoords(null);
         setGeocodeMsg(null);
+        setPrefill(null);
+        removePhoto();
         setOpen(false);
       }
     });
@@ -94,6 +196,14 @@ export default function RegisterRestaurantModal({
       }
     });
   };
+
+  const matchedCategory = prefill?.foodType
+    ? categories.find((c) => c.name === prefill.foodType)
+    : undefined;
+  const prefillNote =
+    prefill?.foodType && !matchedCategory
+      ? `공공데이터 음식종류: ${prefill.foodType}`
+      : "";
 
   return (
     <>
@@ -147,23 +257,67 @@ export default function RegisterRestaurantModal({
               <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
               <input type="hidden" name="longitude" value={coords?.lng ?? ""} />
 
+              {prefill && (
+                <p className="rounded-md bg-brand/10 px-3 py-2 text-[12px] leading-relaxed text-brand">
+                  지도에서 선택한 모범음식점 정보를 채워왔어요. 확인하고
+                  필요한 부분만 고쳐서 등록해주세요.
+                </p>
+              )}
+
               <label className="flex flex-col gap-1.5">
                 <span className={LABEL_CLASS}>가게 이름</span>
                 <input
                   name="name"
                   required
                   autoFocus
+                  defaultValue={prefill?.name ?? ""}
                   placeholder="예: 할머니 손칼국수"
                   className={FIELD_CLASS}
                 />
               </label>
+
+              <div className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>사진 (선택)</span>
+                {photoPreview ? (
+                  <div className="group relative h-28 w-28 overflow-hidden rounded-md border border-line">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 업로드 전 로컬 미리보기 */}
+                    <img
+                      src={photoPreview}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      aria-label="사진 제거"
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-2 text-xs font-semibold text-muted transition-colors hover:border-brand hover:text-brand">
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    사진 추가
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+                {uploadError && (
+                  <span className="text-[11px] text-red-500">{uploadError}</span>
+                )}
+              </div>
 
               <label className="flex flex-col gap-1.5">
                 <span className={LABEL_CLASS}>카테고리</span>
                 <select
                   name="category_id"
                   required
-                  defaultValue=""
+                  defaultValue={matchedCategory?.id ?? ""}
                   onChange={(e) => {
                     const opt = e.target.selectedOptions[0];
                     const hidden = e.target.form?.elements.namedItem(
@@ -180,7 +334,11 @@ export default function RegisterRestaurantModal({
                     </option>
                   ))}
                 </select>
-                <input type="hidden" name="category_name" />
+                <input
+                  type="hidden"
+                  name="category_name"
+                  defaultValue={matchedCategory?.name ?? ""}
+                />
               </label>
 
               <div className="flex flex-col gap-1.5">
@@ -189,6 +347,7 @@ export default function RegisterRestaurantModal({
                   <input
                     ref={addressRef}
                     name="address"
+                    defaultValue={prefill?.address ?? ""}
                     placeholder="예: 서울 중구 세종대로 110"
                     onChange={() => {
                       setCoords(null);
@@ -251,6 +410,7 @@ export default function RegisterRestaurantModal({
                 <textarea
                   name="memo"
                   rows={2}
+                  defaultValue={prefillNote}
                   placeholder="예: 웨이팅 15분, 1인석 있음"
                   className={`${FIELD_CLASS} resize-none leading-relaxed`}
                 />
@@ -276,7 +436,7 @@ export default function RegisterRestaurantModal({
                   className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-60"
                 >
                   {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  등록하기
+                  {uploading ? "업로드 중..." : "등록하기"}
                 </button>
               </div>
             </form>
@@ -285,4 +445,6 @@ export default function RegisterRestaurantModal({
       )}
     </>
   );
-}
+});
+
+export default RegisterRestaurantModal;

@@ -19,4 +19,5 @@ export type Restaurant = {
   rating: number | null;
   memo: string | null;
   user_id: string | null;
+  image_url: string | null;
 };

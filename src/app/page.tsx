@@ -25,26 +25,45 @@ const STEPS = [
 
 export default async function Home() {
   const supabaseServer = await createClient();
-  const [
-    {
-      data: { user },
-    },
-    { data: previewRestaurant },
-    { data: categories },
-  ] = await Promise.all([
-    supabaseServer.auth.getUser(),
-    supabase
-      .from("restaurants")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.from("categories").select("id, name").order("id"),
-  ]);
+  const {
+    data: { user },
+  } = await supabaseServer.auth.getUser();
   const nickname =
     (user?.user_metadata?.nickname as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
     null;
+
+  // 리스트 미리보기는 로그인한 사용자 본인의 데이터만 보여준다.
+  // 즐겨찾기한 곳이 있으면 그걸, 없으면 직접 등록한 곳 중 최신 것을 보여주고
+  // 둘 다 없으면(신규 유저·비로그인) 미리보기 자체를 숨긴다.
+  let previewRestaurant: Restaurant | null = null;
+  let categories: { id: number; name: string }[] = [];
+  if (user) {
+    const [{ data: favRow }, { data: categoryRows }] = await Promise.all([
+      supabase
+        .from("favorites")
+        .select("restaurants(*)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("categories").select("id, name").order("id"),
+    ]);
+    categories = categoryRows ?? [];
+    previewRestaurant =
+      (favRow?.restaurants as unknown as Restaurant | null) ?? null;
+
+    if (!previewRestaurant) {
+      const { data: ownRow } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      previewRestaurant = ownRow ?? null;
+    }
+  }
 
   const previewCard = previewRestaurant
     ? {
@@ -58,6 +77,7 @@ export default async function Home() {
         memo: (previewRestaurant as Restaurant).memo,
         visited: (previewRestaurant as Restaurant).visited,
         ownerId: (previewRestaurant as Restaurant).user_id,
+        imageUrl: (previewRestaurant as Restaurant).image_url,
       }
     : null;
 
@@ -101,11 +121,11 @@ export default async function Home() {
         )}
       </section>
 
-      {/* 카드 미리보기 — 실제 등록된 가게로 리스트가 어떻게 보이는지 보여준다 */}
+      {/* 카드 미리보기 — 내가 즐겨찾기했거나 등록한 가게로 리스트가 어떻게 보이는지 보여준다 */}
       {previewCard && (
         <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-            리스트 미리보기
+            내 리스트 미리보기
           </p>
           <div className="mt-3 max-w-md">
             <RestaurantCard

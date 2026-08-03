@@ -30,6 +30,7 @@ export async function createRestaurant(
   const memo = String(formData.get("memo") ?? "").trim();
   const latRaw = formData.get("latitude");
   const lngRaw = formData.get("longitude");
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
 
   const { error } = await supabase.from("restaurants").insert({
     name,
@@ -40,6 +41,7 @@ export async function createRestaurant(
     memo: memo || null,
     latitude: latRaw ? Number(latRaw) : null,
     longitude: lngRaw ? Number(lngRaw) : null,
+    image_url: imageUrl || null,
     user_id: user.id,
   });
 
@@ -81,6 +83,7 @@ export async function updateRestaurant(
   const memo = String(formData.get("memo") ?? "").trim();
   const latRaw = formData.get("latitude");
   const lngRaw = formData.get("longitude");
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
 
   const { error } = await supabase
     .from("restaurants")
@@ -93,6 +96,7 @@ export async function updateRestaurant(
       memo: memo || null,
       latitude: latRaw ? Number(latRaw) : null,
       longitude: lngRaw ? Number(lngRaw) : null,
+      image_url: imageUrl || null,
     })
     .eq("id", restaurantId);
 
@@ -230,6 +234,10 @@ export async function createReview(
   const restaurantId = formData.get("restaurant_id");
   const content = String(formData.get("content") ?? "").trim();
   const ratingRaw = formData.get("rating");
+  const imageUrls = formData
+    .getAll("image_urls")
+    .map((url) => String(url))
+    .filter(Boolean);
 
   if (!restaurantId) {
     return { error: "잘못된 요청이에요." };
@@ -246,6 +254,7 @@ export async function createReview(
     user_id: user.id,
     rating: Number(ratingRaw),
     content,
+    image_urls: imageUrls.length > 0 ? imageUrls : null,
   });
 
   if (error) {

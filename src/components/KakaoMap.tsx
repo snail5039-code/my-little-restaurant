@@ -50,11 +50,17 @@ function escapeHtml(text: string) {
 export default function KakaoMap({
   markers,
   certifiedMarkers = [],
+  onRegisterCertified,
 }: {
   markers: MapMarker[];
   certifiedMarkers?: CertifiedMapMarker[];
+  onRegisterCertified?: (marker: CertifiedMapMarker) => void;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const onRegisterCertifiedRef = useRef(onRegisterCertified);
+  useEffect(() => {
+    onRegisterCertifiedRef.current = onRegisterCertified;
+  }, [onRegisterCertified]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -129,27 +135,73 @@ export default function KakaoMap({
           image: markerImage,
         });
 
-        const addressHtml = marker.address
-          ? `<p style="margin:4px 0 0;font-size:12px;color:#78716c;max-width:200px;white-space:normal;">${escapeHtml(
-              marker.address
-            )}</p>`
-          : "";
-        const foodTypeHtml = marker.foodType
-          ? `<p style="margin:4px 0 0;font-size:12px;color:#059669;font-weight:600;">${escapeHtml(
-              marker.foodType
-            )}</p>`
-          : "";
+        // 등록 버튼은 실제 클릭 핸들러가 필요해서 문자열 대신 DOM 엘리먼트로
+        // 인포윈도우 내용을 구성한다 (문자열 content엔 이벤트를 못 붙인다).
+        const content = document.createElement("div");
+        content.style.padding = "8px 12px";
+        content.style.fontSize = "13px";
 
-        const infowindow = new kakao.maps.InfoWindow({
-          content: `
-            <div style="padding:8px 12px;font-size:13px;">
-              <strong style="display:block;">${escapeHtml(marker.name)}</strong>
-              <span style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:9999px;background:#05966922;color:#059669;font-size:10px;font-weight:600;">모범음식점</span>
-              ${foodTypeHtml}
-              ${addressHtml}
-            </div>
-          `,
-        });
+        const nameEl = document.createElement("strong");
+        nameEl.style.display = "block";
+        nameEl.textContent = marker.name;
+        content.appendChild(nameEl);
+
+        const badgeEl = document.createElement("span");
+        badgeEl.style.display = "inline-block";
+        badgeEl.style.marginTop = "2px";
+        badgeEl.style.padding = "1px 6px";
+        badgeEl.style.borderRadius = "9999px";
+        badgeEl.style.background = "#05966922";
+        badgeEl.style.color = "#059669";
+        badgeEl.style.fontSize = "10px";
+        badgeEl.style.fontWeight = "600";
+        badgeEl.textContent = "모범음식점";
+        content.appendChild(badgeEl);
+
+        if (marker.foodType) {
+          const foodTypeEl = document.createElement("p");
+          foodTypeEl.style.margin = "4px 0 0";
+          foodTypeEl.style.fontSize = "12px";
+          foodTypeEl.style.color = "#059669";
+          foodTypeEl.style.fontWeight = "600";
+          foodTypeEl.textContent = marker.foodType;
+          content.appendChild(foodTypeEl);
+        }
+
+        if (marker.address) {
+          const addressEl = document.createElement("p");
+          addressEl.style.margin = "4px 0 0";
+          addressEl.style.fontSize = "12px";
+          addressEl.style.color = "#78716c";
+          addressEl.style.maxWidth = "200px";
+          addressEl.style.whiteSpace = "normal";
+          addressEl.textContent = marker.address;
+          content.appendChild(addressEl);
+        }
+
+        if (onRegisterCertifiedRef.current) {
+          const registerBtn = document.createElement("button");
+          registerBtn.type = "button";
+          registerBtn.textContent = "내 리스트에 등록하기 →";
+          registerBtn.style.display = "inline-block";
+          registerBtn.style.marginTop = "6px";
+          registerBtn.style.fontSize = "12px";
+          registerBtn.style.fontWeight = "600";
+          registerBtn.style.color = "#d24d17";
+          registerBtn.style.background = "none";
+          registerBtn.style.border = "none";
+          registerBtn.style.padding = "0";
+          registerBtn.style.cursor = "pointer";
+          registerBtn.style.textDecoration = "underline";
+          registerBtn.addEventListener("click", () => {
+            onRegisterCertifiedRef.current?.(marker);
+            infowindow.close();
+            if (openInfoWindow === infowindow) openInfoWindow = null;
+          });
+          content.appendChild(registerBtn);
+        }
+
+        const infowindow = new kakao.maps.InfoWindow({ content });
 
         kakao.maps.event.addListener(kakaoMarker, "click", () => {
           toggleInfoWindow(infowindow, kakaoMarker);

@@ -55,6 +55,7 @@ export default async function RestaurantsPage() {
     lat: restaurant.latitude ?? undefined,
     lng: restaurant.longitude ?? undefined,
     ownerId: restaurant.user_id,
+    imageUrl: restaurant.image_url,
     isFavorited: favoritedIds.has(restaurant.id),
   }));
 
