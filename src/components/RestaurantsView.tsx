@@ -159,6 +159,7 @@ export default function RestaurantsView({
                 {...restaurant}
                 isOwner={!!currentUserId && restaurant.ownerId === currentUserId}
                 isLoggedIn={isLoggedIn}
+                categories={categories}
               />
             ))}
           </div>

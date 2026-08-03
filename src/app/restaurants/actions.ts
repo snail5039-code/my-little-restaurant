@@ -51,6 +51,84 @@ export async function createRestaurant(
   return { success: true };
 }
 
+export async function updateRestaurant(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const restaurantId = formData.get("restaurant_id");
+  if (!restaurantId) {
+    return { error: "잘못된 요청이에요." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    return { error: "가게 이름을 입력해주세요." };
+  }
+
+  const categoryId = formData.get("category_id");
+  const categoryName = String(formData.get("category_name") ?? "");
+  const address = String(formData.get("address") ?? "").trim();
+  const aloneOkRaw = formData.get("alone_ok");
+  const memo = String(formData.get("memo") ?? "").trim();
+  const latRaw = formData.get("latitude");
+  const lngRaw = formData.get("longitude");
+
+  const { error } = await supabase
+    .from("restaurants")
+    .update({
+      name,
+      food: categoryName || "기타",
+      category_id: categoryId ? Number(categoryId) : null,
+      address: address || null,
+      alone_ok: aloneOkRaw ? Number(aloneOkRaw) : null,
+      memo: memo || null,
+      latitude: latRaw ? Number(latRaw) : null,
+      longitude: lngRaw ? Number(lngRaw) : null,
+    })
+    .eq("id", restaurantId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/restaurants");
+  revalidatePath(`/restaurants/${restaurantId}`);
+  return { success: true };
+}
+
+export async function deleteRestaurant(restaurantId: number | string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const { error } = await supabase
+    .from("restaurants")
+    .delete()
+    .eq("id", restaurantId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/restaurants");
+  revalidatePath("/mypage");
+  return { success: true };
+}
+
 export async function updateMemo(restaurantId: number | string, memo: string) {
   const supabase = await createClient();
   const {

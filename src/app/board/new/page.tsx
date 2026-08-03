@@ -37,7 +37,7 @@ export default async function NewPostPage() {
       <h1 className="text-[22px] font-bold tracking-tight text-foreground">
         글쓰기
       </h1>
-      <NewPostForm isAdmin={isAdmin} />
+      <NewPostForm isAdmin={isAdmin} userId={user.id} />
     </main>
   );
 }

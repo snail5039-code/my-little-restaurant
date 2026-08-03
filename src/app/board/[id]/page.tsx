@@ -85,6 +85,20 @@ export default async function PostDetailPage({
         <div className="whitespace-pre-wrap px-5 py-5 text-[14px] leading-relaxed text-foreground">
           {post.content}
         </div>
+
+        {post.image_urls && post.image_urls.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 border-t border-line p-5 sm:grid-cols-3">
+            {post.image_urls.map((url: string) => (
+              // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage 공개 URL
+              <img
+                key={url}
+                src={url}
+                alt={post.title}
+                className="aspect-square w-full rounded-md border border-line object-cover"
+              />
+            ))}
+          </div>
+        )}
       </article>
     </main>
   );

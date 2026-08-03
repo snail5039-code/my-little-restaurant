@@ -75,6 +75,20 @@ export default function KakaoMap({
         level: 6,
       });
 
+      // 마커를 클릭하면 다른 인포윈도우는 닫고, 이미 열려 있는 마커를 다시
+      // 클릭하면 닫히도록 현재 열린 인포윈도우 하나만 추적한다.
+      let openInfoWindow: KakaoInfoWindow | null = null;
+      const toggleInfoWindow = (infowindow: KakaoInfoWindow, marker: KakaoMarker) => {
+        if (openInfoWindow === infowindow) {
+          infowindow.close();
+          openInfoWindow = null;
+          return;
+        }
+        openInfoWindow?.close();
+        infowindow.open(map, marker);
+        openInfoWindow = infowindow;
+      };
+
       markers.forEach((marker) => {
         const position = new kakao.maps.LatLng(marker.lat, marker.lng);
         const kakaoMarker = new kakao.maps.Marker({ position, map });
@@ -98,7 +112,7 @@ export default function KakaoMap({
         });
 
         kakao.maps.event.addListener(kakaoMarker, "click", () => {
-          infowindow.open(map, kakaoMarker);
+          toggleInfoWindow(infowindow, kakaoMarker);
         });
       });
 
@@ -120,19 +134,25 @@ export default function KakaoMap({
               marker.address
             )}</p>`
           : "";
+        const foodTypeHtml = marker.foodType
+          ? `<p style="margin:4px 0 0;font-size:12px;color:#059669;font-weight:600;">${escapeHtml(
+              marker.foodType
+            )}</p>`
+          : "";
 
         const infowindow = new kakao.maps.InfoWindow({
           content: `
             <div style="padding:8px 12px;font-size:13px;">
               <strong style="display:block;">${escapeHtml(marker.name)}</strong>
               <span style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:9999px;background:#05966922;color:#059669;font-size:10px;font-weight:600;">모범음식점</span>
+              ${foodTypeHtml}
               ${addressHtml}
             </div>
           `,
         });
 
         kakao.maps.event.addListener(kakaoMarker, "click", () => {
-          infowindow.open(map, kakaoMarker);
+          toggleInfoWindow(infowindow, kakaoMarker);
         });
       });
 
@@ -160,7 +180,7 @@ export default function KakaoMap({
           () => {
             // 위치 권한 거부/실패 시 기존 중심(내 맛집·검색 결과 또는 서울시청) 유지
           },
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
         );
       }
     });

@@ -16,6 +16,8 @@ import ReviewForm from "@/components/ReviewForm";
 import CommentSection from "@/components/CommentSection";
 import MenuSection from "@/components/MenuSection";
 import ModelRestaurantBadge from "@/components/ModelRestaurantBadge";
+import EditRestaurantModal from "@/components/EditRestaurantModal";
+import DeleteRestaurantButton from "@/components/DeleteRestaurantButton";
 import { checkModelRestaurant } from "@/lib/modelRestaurant";
 
 export default async function RestaurantDetailPage({
@@ -32,6 +34,7 @@ export default async function RestaurantDetailPage({
     { data: reviews },
     { data: comments },
     { count: favoriteCount },
+    { data: categories },
     {
       data: { user },
     },
@@ -60,6 +63,7 @@ export default async function RestaurantDetailPage({
       .from("favorites")
       .select("*", { count: "exact", head: true })
       .eq("restaurant_id", id),
+    supabase.from("categories").select("id, name").order("id"),
     supabaseServer.auth.getUser(),
   ]);
 
@@ -111,6 +115,29 @@ export default async function RestaurantDetailPage({
           <div className="absolute right-3 top-3 flex items-center gap-2">
             {isOwner && (
               <VisitedToggle restaurantId={restaurant.id} initialVisited={restaurant.visited} />
+            )}
+            {isOwner && (
+              <EditRestaurantModal
+                size="md"
+                restaurant={{
+                  id: restaurant.id,
+                  name: restaurant.name,
+                  categoryId: restaurant.category_id,
+                  address: restaurant.address,
+                  aloneOk: restaurant.alone_ok,
+                  memo: restaurant.memo,
+                  lat: restaurant.latitude,
+                  lng: restaurant.longitude,
+                }}
+                categories={categories ?? []}
+              />
+            )}
+            {isOwner && (
+              <DeleteRestaurantButton
+                restaurantId={restaurant.id}
+                redirectTo="/restaurants"
+                size="md"
+              />
             )}
             <FavoriteButton
               restaurantId={restaurant.id}

@@ -21,11 +21,6 @@ export default function RecommendModal({
   const [aloneFriendly, setAloneFriendly] = useState(false);
   const [picked, setPicked] = useState<RestaurantCardData[] | null>(null);
 
-  const usedCategories = useMemo(() => {
-    const names = new Set(restaurants.map((r) => r.category).filter(Boolean));
-    return categories.filter((c) => names.has(c.name));
-  }, [restaurants, categories]);
-
   const pool = useMemo(
     () =>
       restaurants.filter((r) => {
@@ -86,7 +81,7 @@ export default function RecommendModal({
             </div>
 
             <div className="flex flex-col gap-4 p-5">
-              {usedCategories.length > 0 && (
+              {categories.length > 0 && (
                 <div>
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     카테고리
@@ -102,7 +97,7 @@ export default function RecommendModal({
                     >
                       전체
                     </button>
-                    {usedCategories.map((c) => (
+                    {categories.map((c) => (
                       <button
                         key={c.id}
                         onClick={() => setCategory(c.name)}
@@ -174,6 +169,7 @@ export default function RecommendModal({
                         !!currentUserId && restaurant.ownerId === currentUserId
                       }
                       isLoggedIn={isLoggedIn}
+                      categories={categories}
                     />
                   ))}
                 </div>

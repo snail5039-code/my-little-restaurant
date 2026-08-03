@@ -21,11 +21,14 @@ import {
 } from "@/app/restaurants/actions";
 import Rating from "./Rating";
 import LoginRequiredModal from "./LoginRequiredModal";
+import EditRestaurantModal from "./EditRestaurantModal";
+import DeleteRestaurantButton from "./DeleteRestaurantButton";
 
 export type RestaurantCardData = {
   id: number | string;
   name: string;
   category?: string;
+  categoryId?: number | null;
   rating?: number;
   reviewCount?: number;
   address?: string;
@@ -42,6 +45,7 @@ export default function RestaurantCard({
   id,
   name,
   category,
+  categoryId,
   rating,
   reviewCount,
   address,
@@ -49,9 +53,16 @@ export default function RestaurantCard({
   memo,
   visited: visitedProp,
   isFavorited,
+  lat,
+  lng,
   isOwner,
   isLoggedIn,
-}: RestaurantCardData & { isOwner?: boolean; isLoggedIn?: boolean }) {
+  categories,
+}: RestaurantCardData & {
+  isOwner?: boolean;
+  isLoggedIn?: boolean;
+  categories?: { id: number; name: string }[];
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(memo ?? "");
   const [currentMemo, setCurrentMemo] = useState(memo ?? "");
@@ -127,6 +138,22 @@ export default function RestaurantCard({
             )}
           </button>
         )}
+        {isOwner && categories && (
+          <EditRestaurantModal
+            restaurant={{
+              id,
+              name,
+              categoryId,
+              address,
+              aloneOk,
+              memo,
+              lat,
+              lng,
+            }}
+            categories={categories}
+          />
+        )}
+        {isOwner && <DeleteRestaurantButton restaurantId={id} />}
         <button
           onClick={handleFavoriteClick}
           disabled={favPending}

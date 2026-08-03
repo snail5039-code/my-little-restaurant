@@ -39,6 +39,9 @@ export default function NearbyModelRestaurantSearch({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [hasResults, setHasResults] = useState(false);
+  const [detecting, setDetecting] = useState(
+    () => typeof navigator !== "undefined" && !!navigator.geolocation
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   const runSearch = async (regionValue: string) => {
@@ -117,13 +120,17 @@ export default function NearbyModelRestaurantSearch({
         loadKakaoMaps().then(() => {
           if (cancelled) return;
           const kakao = window.kakao;
-          if (!kakao) return;
+          if (!kakao) {
+            setDetecting(false);
+            return;
+          }
 
           const geocoder = new kakao.maps.services.Geocoder();
           geocoder.coord2Address(
             position.coords.longitude,
             position.coords.latitude,
             (result, geoStatus) => {
+              setDetecting(false);
               if (cancelled) return;
               if (geoStatus !== kakao.maps.services.Status.OK || !result[0]) {
                 return;
@@ -141,8 +148,11 @@ export default function NearbyModelRestaurantSearch({
       },
       () => {
         // 위치 권한 거부/실패 시 자동 표시 없이 수동 검색만 가능
+        setDetecting(false);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      // GPS 정확도(enableHighAccuracy)까지는 필요 없고, 실내·PC에서도 빠르게
+      // 응답받을 수 있는 네트워크 기반 위치로 충분하다. 타임아웃도 넉넉히 둔다.
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
     );
 
     return () => {
@@ -189,6 +199,11 @@ export default function NearbyModelRestaurantSearch({
         )}
       </div>
       {status && <p className="pl-6 text-[11px] text-muted">{status}</p>}
+      {detecting && !status && (
+        <p className="pl-6 text-[11px] text-muted">
+          내 위치를 확인해서 우리 동네 모범업소를 찾는 중...
+        </p>
+      )}
     </div>
   );
 }

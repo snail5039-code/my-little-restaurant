@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { BookmarkPlus, NotebookPen, MapPinned, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { supabase, type Restaurant } from "@/lib/supabase";
 import OAuthLoginButton from "@/components/OAuthLoginButton";
-import Rating from "@/components/Rating";
+import RestaurantCard from "@/components/RestaurantCard";
 
 const STEPS = [
   {
@@ -23,14 +24,42 @@ const STEPS = [
 ];
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabaseServer = await createClient();
+  const [
+    {
+      data: { user },
+    },
+    { data: previewRestaurant },
+    { data: categories },
+  ] = await Promise.all([
+    supabaseServer.auth.getUser(),
+    supabase
+      .from("restaurants")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("categories").select("id, name").order("id"),
+  ]);
   const nickname =
     (user?.user_metadata?.nickname as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
     null;
+
+  const previewCard = previewRestaurant
+    ? {
+        id: (previewRestaurant as Restaurant).id,
+        name: (previewRestaurant as Restaurant).name,
+        category: (previewRestaurant as Restaurant).food,
+        categoryId: (previewRestaurant as Restaurant).category_id,
+        address: (previewRestaurant as Restaurant).address ?? undefined,
+        rating: (previewRestaurant as Restaurant).rating ?? undefined,
+        aloneOk: (previewRestaurant as Restaurant).alone_ok ?? undefined,
+        memo: (previewRestaurant as Restaurant).memo,
+        visited: (previewRestaurant as Restaurant).visited,
+        ownerId: (previewRestaurant as Restaurant).user_id,
+      }
+    : null;
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 md:px-8 md:py-16">
@@ -65,48 +94,29 @@ export default async function Home() {
             </span>
           </div>
         ) : (
-          <>
-            <div className="mt-7 flex flex-wrap items-center gap-2.5">
-              <OAuthLoginButton provider="kakao" />
-              <OAuthLoginButton provider="google" />
-            </div>
-
-            <Link
-              href="/restaurants"
-              className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline"
-            >
-              먼저 둘러보기
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </>
+          <div className="mt-7 flex flex-wrap items-center gap-2.5">
+            <OAuthLoginButton provider="kakao" />
+            <OAuthLoginButton provider="google" />
+          </div>
         )}
       </section>
 
-      {/* 카드 미리보기 — 실제 리스트가 어떻게 보이는지 */}
-      <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-          리스트 미리보기
-        </p>
-        <div className="mt-3 flex gap-3.5">
-          <div className="flex h-[86px] w-[86px] shrink-0 items-center justify-center rounded-md border border-line bg-surface-muted">
-            <MapPinned className="h-7 w-7 text-muted" strokeWidth={1.4} />
+      {/* 카드 미리보기 — 실제 등록된 가게로 리스트가 어떻게 보이는지 보여준다 */}
+      {previewCard && (
+        <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+            리스트 미리보기
+          </p>
+          <div className="mt-3 max-w-md">
+            <RestaurantCard
+              {...previewCard}
+              categories={categories ?? []}
+              isLoggedIn={!!user}
+              isOwner={!!user && previewCard.ownerId === user.id}
+            />
           </div>
-          <div className="flex min-w-0 flex-col justify-center">
-            <p className="truncate text-[15px] font-bold text-foreground">
-              할머니 손칼국수
-            </p>
-            <div className="mt-1">
-              <Rating value={4.2} reviewCount={3} />
-            </div>
-            <p className="mt-1.5 text-xs text-muted">
-              한식 <span className="text-line">·</span> 혼밥 2/5
-            </p>
-            <p className="mt-1.5 truncate text-xs text-muted">
-              웨이팅 15분, 1인석 있어서 혼밥 편했음
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 사용 흐름 — 카드 3장 대신 구분선으로 나눈 한 덩어리 */}
       <section className="mt-10 grid grid-cols-1 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">

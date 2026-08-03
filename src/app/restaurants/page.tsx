@@ -1,31 +1,52 @@
+import { Lock } from "lucide-react";
 import { supabase, type Restaurant } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import RestaurantsView from "@/components/RestaurantsView";
+import OAuthLoginButton from "@/components/OAuthLoginButton";
 
 export default async function RestaurantsPage() {
   const supabaseServer = await createClient();
+  const {
+    data: { user },
+  } = await supabaseServer.auth.getUser();
 
-  const [
-    { data: restaurants, error },
-    { data: categories },
-    {
-      data: { user },
-    },
-  ] = await Promise.all([
-    supabase.from("restaurants").select("*").order("id"),
-    supabase.from("categories").select("id, name").order("id"),
-    supabaseServer.auth.getUser(),
-  ]);
+  if (!user) {
+    return (
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-muted text-brand">
+          <Lock className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+        <h1 className="text-lg font-bold text-foreground">
+          로그인 후 맛집 리스트를 볼 수 있어요
+        </h1>
+        <p className="max-w-sm text-[13px] leading-relaxed text-muted">
+          다른 사람이 저장한 가게와 내 기록을 함께 보려면 먼저 로그인해주세요.
+        </p>
+        <div className="flex w-full max-w-[18rem] flex-col gap-2">
+          <OAuthLoginButton provider="kakao" fullWidth />
+          <OAuthLoginButton provider="google" fullWidth />
+        </div>
+      </main>
+    );
+  }
 
-  const { data: myFavorites } = user
-    ? await supabaseServer.from("favorites").select("restaurant_id").eq("user_id", user.id)
-    : { data: [] as { restaurant_id: number }[] };
+  const [{ data: restaurants, error }, { data: categories }] =
+    await Promise.all([
+      supabase.from("restaurants").select("*").order("id"),
+      supabase.from("categories").select("id, name").order("id"),
+    ]);
+
+  const { data: myFavorites } = await supabaseServer
+    .from("favorites")
+    .select("restaurant_id")
+    .eq("user_id", user.id);
   const favoritedIds = new Set((myFavorites ?? []).map((f) => f.restaurant_id));
 
   const cards = (restaurants ?? []).map((restaurant: Restaurant) => ({
     id: restaurant.id,
     name: restaurant.name,
     category: restaurant.food,
+    categoryId: restaurant.category_id,
     address: restaurant.address ?? undefined,
     rating: restaurant.rating ?? undefined,
     aloneOk: restaurant.alone_ok ?? undefined,

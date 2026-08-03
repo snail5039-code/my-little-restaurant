@@ -17,6 +17,7 @@ declare global {
 
   interface KakaoInfoWindow {
     open(map: KakaoMapInstance, marker: KakaoMarker): void;
+    close(): void;
   }
 
   interface KakaoGeocoderResult {

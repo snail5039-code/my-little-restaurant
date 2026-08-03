@@ -22,6 +22,10 @@ export async function createPost(
   const category = String(formData.get("category") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const imageUrls = formData
+    .getAll("image_urls")
+    .map((url) => String(url))
+    .filter(Boolean);
 
   if (!CATEGORIES.some((c) => c.value === category)) {
     return { error: "카테고리를 선택해주세요." };
@@ -35,7 +39,13 @@ export async function createPost(
 
   const { data, error } = await supabase
     .from("posts")
-    .insert({ category, title, content, user_id: user.id })
+    .insert({
+      category,
+      title,
+      content,
+      user_id: user.id,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
+    })
     .select("id")
     .single();
 
