@@ -95,6 +95,7 @@ export default function RestaurantCard({
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!isLoggedIn) {
       setLoginModalOpen(true);
       return;
@@ -110,6 +111,7 @@ export default function RestaurantCard({
 
   const handleVisitedClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const next = !visited;
     setVisited(next);
     startVisitedTransition(async () => {
@@ -122,58 +124,6 @@ export default function RestaurantCard({
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-brand/40">
-      <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1">
-        {isOwner && (
-          <button
-            onClick={handleVisitedClick}
-            disabled={visitedPending}
-            title={visited ? "방문 완료 (클릭해서 취소)" : "방문 체크하기"}
-            className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-              visited
-                ? "border-brand bg-brand text-white"
-                : "border-line bg-surface text-muted hover:text-brand"
-            }`}
-          >
-            {visited ? (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            ) : (
-              <Clock className="h-3.5 w-3.5" />
-            )}
-          </button>
-        )}
-        {isOwner && categories && (
-          <EditRestaurantModal
-            restaurant={{
-              id,
-              name,
-              categoryId,
-              address,
-              aloneOk,
-              memo,
-              lat,
-              lng,
-              imageUrl,
-              ownerId,
-            }}
-            categories={categories}
-          />
-        )}
-        {isOwner && <DeleteRestaurantButton restaurantId={id} />}
-        <button
-          onClick={handleFavoriteClick}
-          disabled={favPending}
-          aria-label="즐겨찾기"
-          title="즐겨찾기"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:text-red-500"
-        >
-          <Heart
-            className={`h-3.5 w-3.5 ${
-              favorited ? "fill-red-500 text-red-500" : ""
-            }`}
-          />
-        </button>
-      </div>
-
       <LoginRequiredModal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
@@ -191,9 +141,65 @@ export default function RestaurantCard({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="truncate pr-32 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
-            {name}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="min-w-0 truncate text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+              {name}
+            </h3>
+            <div
+              className="flex shrink-0 items-center gap-1"
+              onClick={(e) => e.preventDefault()}
+            >
+              {isOwner && (
+                <button
+                  onClick={handleVisitedClick}
+                  disabled={visitedPending}
+                  title={visited ? "방문 완료 (클릭해서 취소)" : "방문 체크하기"}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+                    visited
+                      ? "border-brand bg-brand text-white"
+                      : "border-line bg-surface text-muted hover:text-brand"
+                  }`}
+                >
+                  {visited ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Clock className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+              {isOwner && categories && (
+                <EditRestaurantModal
+                  restaurant={{
+                    id,
+                    name,
+                    categoryId,
+                    address,
+                    aloneOk,
+                    memo,
+                    lat,
+                    lng,
+                    imageUrl,
+                    ownerId,
+                  }}
+                  categories={categories}
+                />
+              )}
+              {isOwner && <DeleteRestaurantButton restaurantId={id} />}
+              <button
+                onClick={handleFavoriteClick}
+                disabled={favPending}
+                aria-label="즐겨찾기"
+                title="즐겨찾기"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:text-red-500"
+              >
+                <Heart
+                  className={`h-3.5 w-3.5 ${
+                    favorited ? "fill-red-500 text-red-500" : ""
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
 
           <div className="mt-1">
             <Rating value={rating} reviewCount={reviewCount ?? 0} />
