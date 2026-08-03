@@ -24,10 +24,23 @@ declare global {
     y: string;
   }
 
+  interface KakaoCoord2AddressResult {
+    address?: {
+      region_1depth_name: string;
+      region_2depth_name: string;
+      region_3depth_name: string;
+    };
+  }
+
   interface KakaoGeocoder {
     addressSearch(
       address: string,
       callback: (result: KakaoGeocoderResult[], status: string) => void
+    ): void;
+    coord2Address(
+      lng: number,
+      lat: number,
+      callback: (result: KakaoCoord2AddressResult[], status: string) => void
     ): void;
   }
 

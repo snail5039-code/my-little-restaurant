@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, Loader2, X } from "lucide-react";
 import { searchModelRestaurantsByRegion } from "@/lib/modelRestaurant";
 import { loadKakaoMaps } from "@/lib/kakao";
@@ -41,13 +41,11 @@ export default function NearbyModelRestaurantSearch({
   const [hasResults, setHasResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSearch = async () => {
-    const trimmed = region.trim();
-    if (!trimmed || loading) return;
+  const runSearch = async (regionValue: string) => {
+    const trimmed = regionValue.trim();
+    if (!trimmed) return;
 
-    // 검색을 시작하자마자 포커스를 떼서 모바일 자판이 바로 내려가게 한다.
     inputRef.current?.blur();
-
     setLoading(true);
     setStatus(null);
 
@@ -106,6 +104,53 @@ export default function NearbyModelRestaurantSearch({
     }
   };
 
+  // 마운트 시 내 현재 위치를 구/군 단위로 역지오코딩해서, 검색 없이도
+  // 우리 동네 모범업소를 자동으로 지도에 띄운다.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    let cancelled = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) return;
+
+        loadKakaoMaps().then(() => {
+          if (cancelled) return;
+          const kakao = window.kakao;
+          if (!kakao) return;
+
+          const geocoder = new kakao.maps.services.Geocoder();
+          geocoder.coord2Address(
+            position.coords.longitude,
+            position.coords.latitude,
+            (result, geoStatus) => {
+              if (cancelled) return;
+              if (geoStatus !== kakao.maps.services.Status.OK || !result[0]) {
+                return;
+              }
+              const district =
+                result[0].address?.region_2depth_name ||
+                result[0].address?.region_1depth_name;
+              if (!district) return;
+
+              setRegion(district);
+              runSearch(district);
+            }
+          );
+        });
+      },
+      () => {
+        // 위치 권한 거부/실패 시 자동 표시 없이 수동 검색만 가능
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleClear = () => {
     setRegion("");
     setStatus(null);
@@ -121,12 +166,12 @@ export default function NearbyModelRestaurantSearch({
           ref={inputRef}
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          onKeyDown={(e) => e.key === "Enter" && runSearch(region)}
           placeholder="구/군/시 이름 한 단어로 검색 (예: 강남구, 수원시)"
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
         />
         <button
-          onClick={handleSearch}
+          onClick={() => runSearch(region)}
           disabled={loading || !region.trim()}
           className="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
         >
