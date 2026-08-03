@@ -1,4 +1,4 @@
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, CheckCircle2, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProfileEditForm from "@/components/ProfileEditForm";
 import OAuthLoginButton from "@/components/OAuthLoginButton";
@@ -11,7 +11,7 @@ export default async function MyPage() {
 
   if (!user) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center md:p-8">
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
           마이페이지
         </h1>
@@ -70,24 +70,35 @@ export default async function MyPage() {
     .filter((name): name is string => Boolean(name));
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-        마이페이지
-      </h1>
+    <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+          마이페이지
+        </h1>
+        <p className="mt-1 text-sm text-neutral-400">
+          {profile?.nickname ?? "회원"}님, 오늘도 좋은 한 끼 되세요.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
         <section className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-neutral-900">
-              <span className="text-2xl font-bold text-orange-500">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-neutral-900">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
                 {visitedCount ?? 0}
               </span>
               <span className="text-sm text-neutral-500 dark:text-neutral-400">
                 방문한 맛집
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center gap-1 rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-neutral-900">
-              <span className="text-2xl font-bold text-orange-500">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-neutral-900">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-400 dark:bg-red-900/30">
+                <Heart className="h-5 w-5 fill-current" />
+              </span>
+              <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
                 {favoriteCount ?? 0}
               </span>
               <span className="text-sm text-neutral-500 dark:text-neutral-400">

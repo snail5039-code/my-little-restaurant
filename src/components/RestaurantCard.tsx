@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Star, UtensilsCrossed, Coffee, Pencil, Check, X } from "lucide-react";
+import {
+  Star,
+  UtensilsCrossed,
+  Coffee,
+  Pencil,
+  Check,
+  X,
+  MapPin,
+} from "lucide-react";
 import { updateMemo } from "@/app/restaurants/actions";
 
 export type RestaurantCardData = {
@@ -48,49 +56,48 @@ export default function RestaurantCard({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-black/5 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-white/10 dark:bg-neutral-900">
+    <div className="group flex flex-col gap-3 rounded-2xl border border-black/5 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-neutral-900">
       <Link href={`/restaurants/${id}`} className="flex gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-200 to-red-300 text-orange-900 dark:from-orange-900 dark:to-red-900 dark:text-orange-200">
-          <CategoryIcon className="h-8 w-8" />
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-200 to-red-300 text-orange-900 dark:from-orange-900 dark:to-red-950 dark:text-orange-200">
+          <CategoryIcon className="h-9 w-9" strokeWidth={1.5} />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate font-semibold text-neutral-900 dark:text-neutral-50">
-              {name}
-            </h3>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <h3 className="truncate text-base font-bold leading-tight text-neutral-900 group-hover:text-orange-600 dark:text-neutral-50 dark:group-hover:text-orange-400">
+            {name}
+          </h3>
+
+          <div className="flex flex-wrap items-center gap-1.5">
             {category && (
-              <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
                 {category}
+              </span>
+            )}
+            {aloneOk !== undefined && (
+              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                혼밥 {aloneOk}/5
               </span>
             )}
           </div>
 
           {rating !== undefined && (
-            <div className="flex items-center gap-1 text-sm">
-              <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
-              <span className="font-medium text-neutral-800 dark:text-neutral-200">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 rounded-md bg-orange-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                <Star className="h-3 w-3 fill-white" />
                 {rating.toFixed(1)}
               </span>
-              <span className="text-neutral-400">리뷰 {reviewCount ?? 0}</span>
+              <span className="text-xs text-neutral-400">
+                리뷰 {reviewCount ?? 0}
+              </span>
             </div>
           )}
 
           {address && (
-            <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="mt-auto flex items-center gap-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
+              <MapPin className="h-3 w-3 shrink-0" />
               {address}
             </p>
           )}
-
-          {aloneOk !== undefined && (
-            <span className="mt-auto w-fit rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-              혼밥 난이도 {aloneOk}/5
-            </span>
-          )}
-
-          <span className="mt-auto self-end text-xs font-medium text-orange-500">
-            상세보기 →
-          </span>
         </div>
       </Link>
 

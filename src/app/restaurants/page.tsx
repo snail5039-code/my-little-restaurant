@@ -31,8 +31,8 @@ export default async function RestaurantsPage() {
   }));
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-8">
-      <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+    <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
+      <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
         맛집 리스트
       </h1>
 

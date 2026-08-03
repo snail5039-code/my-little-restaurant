@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Plus, X, MapPin, Loader2 } from "lucide-react";
 import { createRestaurant, type ActionState } from "@/app/restaurants/actions";
+import LoginRequiredModal from "./LoginRequiredModal";
 
 const GEOCODE_SCRIPT_ID = "kakao-maps-sdk-services";
 
@@ -95,15 +96,6 @@ export default function RegisterRestaurantModal({
     });
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="flex items-center gap-2 rounded-full border border-dashed border-neutral-300 px-4 py-2 text-sm text-neutral-400 dark:border-neutral-700">
-        <Plus className="h-4 w-4" />
-        맛집 등록은 로그인 후 이용할 수 있어요.
-      </div>
-    );
-  }
-
   return (
     <>
       <button
@@ -114,7 +106,13 @@ export default function RegisterRestaurantModal({
         맛집 등록
       </button>
 
-      {open && (
+      <LoginRequiredModal
+        open={open && !isLoggedIn}
+        onClose={() => setOpen(false)}
+        message="맛집을 등록하려면 로그인이 필요해요."
+      />
+
+      {open && isLoggedIn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
             <div className="mb-4 flex items-center justify-between">
