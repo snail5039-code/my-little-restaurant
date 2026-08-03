@@ -5,6 +5,7 @@ import { Map as MapIcon, LayoutGrid, Search, SearchX } from "lucide-react";
 import RestaurantCard, { type RestaurantCardData } from "./RestaurantCard";
 import KakaoMap from "./KakaoMap";
 import RegisterRestaurantModal from "./RegisterRestaurantModal";
+import RecommendModal from "./RecommendModal";
 
 type View = "card" | "map";
 
@@ -73,6 +74,12 @@ export default function RestaurantsView({
             className="w-full rounded-md border border-line bg-surface py-2 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand"
           />
         </div>
+        <RecommendModal
+          restaurants={restaurants}
+          categories={categories}
+          currentUserId={currentUserId}
+          isLoggedIn={isLoggedIn}
+        />
         <RegisterRestaurantModal
           categories={categories}
           isLoggedIn={isLoggedIn}
