@@ -188,10 +188,8 @@
   - 로그인 상태면 랜딩 페이지에 로그인 버튼 대신 "맛집 리스트로 이동" 버튼 표시
 - 커뮤니티 게시판(`/board`) 신규: 공지사항(관리자만 작성, `profiles.role='admin'` RLS로 강제)/자유게시판/의견수렴, 목록·상세·글쓰기·삭제까지 `posts` 테이블 기반으로 구현
 - "오늘 뭐 먹지?" 추천 모달(`RecommendModal.tsx`): 카테고리/안 가본 곳만/혼밥 편한 곳만 필터로 저장된 맛집 중 3~5곳 랜덤 추천
-
-**진행 중 — 다음 세션 시작점**
-- **모범업소 인증 배지 (진행 중, 미완성)**: 공공데이터포털(data.go.kr) "행정안전부_모범음식점정보 조회서비스"(데이터셋 15155052)로 내 맛집이 모범업소로 지정돼 있으면 상세 페이지에 배지 표시하는 기능 작업 중.
-  - 사용자가 data.go.kr에 가입하고 활용신청해서 서비스키 발급받음 → `.env.local`에 `DATA_GO_KR_SERVICE_KEY`로 저장해둠 (Vercel 환경변수에는 아직 미등록 — 나중에 실제 연동 코드 완성되면 Kakao 키 때와 동일하게 Production/Preview에 추가해야 함)
-  - **막힌 지점**: 이 API의 정확한 요청 URL/파라미터명(업소명·주소 검색용)·응답 필드명을 못 찾음. 공식 문서는 로그인 후 활용신청된 계정에서만 "상세기능정보" 탭에 노출됨. 웹서치로는 정확한 스펙이 안 나왔음.
-  - **다음 세션에서 할 일**: 사용자에게 data.go.kr 로그인 후 해당 데이터셋 상세페이지의 "상세기능정보"(또는 Swagger/가이드 문서) 탭 캡처를 요청 → 정확한 요청 URL·파라미터·응답 스키마 확인 → 서버 전용 함수(예: `checkModelRestaurant(name, address)`)로 이름+주소 매칭 조회 → 맛집 상세 페이지에 배지 표시. 매 요청마다 외부 API를 부르면 느리니, 등록 시점에 확인해서 `restaurants` 테이블에 `is_model_restaurant` 같은 컬럼으로 캐싱하는 것도 고려.
-  - 참고: 메뉴/사진은 이 공공데이터에도 없음 (업소명/주소/전화번호/업종 정도만 제공) — 이 기능으로 메뉴·사진 문제가 해결되는 건 아님.
+- **모범음식점 인증 배지**: 공공데이터포털(data.go.kr) "행정안전부_모범음식점정보 조회서비스"(데이터셋 15155052) 연동 완료.
+  - API 스펙은 로그인 없이도 브라우저로 페이지의 Swagger UI(`window.ui.specSelectors.specJson()`)를 직접 읽어서 확인함 — Base URL `apis.data.go.kr/1741000/excellent_restaurant_info`, `GET /info`, 검색 파라미터는 `cond[BSNSSP_NM::LIKE]`(업소명 포함검색) 등. 메뉴·사진 필드는 없음(업소명/주소/전화번호/음식유형/지정일자만 제공) — 메뉴 매칭은 애초에 불가능.
+  - `src/lib/modelRestaurant.ts`의 `checkModelRestaurant(name, address)`가 업소명으로 조회 후, 주소에서 자치구(구/군, 없으면 시) 단위를 뽑아 교차검증하고, 지정취소(`DSGN_RTRCN_YMD` 존재) 건은 제외
+  - 맛집 상세 페이지(`src/app/restaurants/[id]/page.tsx`)에서 이름 옆에 `ModelRestaurantBadge` 표시, Next.js `fetch` 캐시로 하루 1회만 재조회 (DB 컬럼 캐싱은 아직 안 함)
+  - Vercel 환경변수(Production, Preview)에 `DATA_GO_KR_SERVICE_KEY` 등록 완료 — 다음 배포부터 배지 표시됨

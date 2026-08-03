@@ -15,6 +15,8 @@ import VisitedToggle from "@/components/VisitedToggle";
 import ReviewForm from "@/components/ReviewForm";
 import CommentSection from "@/components/CommentSection";
 import MenuSection from "@/components/MenuSection";
+import ModelRestaurantBadge from "@/components/ModelRestaurantBadge";
+import { checkModelRestaurant } from "@/lib/modelRestaurant";
 
 export default async function RestaurantDetailPage({
   params,
@@ -67,6 +69,11 @@ export default async function RestaurantDetailPage({
 
   const isOwner = !!user && user.id === restaurant.user_id;
   const isLoggedIn = !!user;
+
+  const modelRestaurantMatch = await checkModelRestaurant(
+    restaurant.name,
+    restaurant.address
+  );
 
   let isFavorited = false;
   if (user) {
@@ -123,6 +130,9 @@ export default async function RestaurantDetailPage({
                 <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-muted">
                   {categoryName}
                 </span>
+              )}
+              {modelRestaurantMatch && (
+                <ModelRestaurantBadge info={modelRestaurantMatch} />
               )}
             </div>
             {restaurant.address && (
