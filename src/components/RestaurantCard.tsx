@@ -10,9 +10,17 @@ import {
   X,
   MapPin,
   StickyNote,
+  Heart,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
-import { updateMemo } from "@/app/restaurants/actions";
+import {
+  updateMemo,
+  toggleFavorite,
+  updateVisited,
+} from "@/app/restaurants/actions";
 import Rating from "./Rating";
+import LoginRequiredModal from "./LoginRequiredModal";
 
 export type RestaurantCardData = {
   id: number | string;
@@ -24,6 +32,7 @@ export type RestaurantCardData = {
   aloneOk?: number;
   memo?: string | null;
   visited?: boolean;
+  isFavorited?: boolean;
   lat?: number;
   lng?: number;
   ownerId?: string | null;
@@ -38,14 +47,22 @@ export default function RestaurantCard({
   address,
   aloneOk,
   memo,
-  visited,
+  visited: visitedProp,
+  isFavorited,
   isOwner,
-}: RestaurantCardData & { isOwner?: boolean }) {
+  isLoggedIn,
+}: RestaurantCardData & { isOwner?: boolean; isLoggedIn?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(memo ?? "");
   const [currentMemo, setCurrentMemo] = useState(memo ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [favorited, setFavorited] = useState(!!isFavorited);
+  const [favPending, startFavTransition] = useTransition();
+  const [visited, setVisited] = useState(!!visitedProp);
+  const [visitedPending, startVisitedTransition] = useTransition();
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   const CategoryIcon = category === "카페" ? Coffee : UtensilsCrossed;
 
@@ -62,21 +79,82 @@ export default function RestaurantCard({
     });
   };
 
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      return;
+    }
+    setFavorited((v) => !v);
+    startFavTransition(async () => {
+      const result = await toggleFavorite(id);
+      if (result?.error) {
+        setFavorited((v) => !v);
+      }
+    });
+  };
+
+  const handleVisitedClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const next = !visited;
+    setVisited(next);
+    startVisitedTransition(async () => {
+      const result = await updateVisited(id, next);
+      if (result?.error) {
+        setVisited(!next);
+      }
+    });
+  };
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-brand/40">
+    <article className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-brand/40">
+      <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1">
+        {isOwner && (
+          <button
+            onClick={handleVisitedClick}
+            disabled={visitedPending}
+            title={visited ? "방문 완료 (클릭해서 취소)" : "방문 체크하기"}
+            className={`flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+              visited
+                ? "border-brand bg-brand text-white"
+                : "border-line bg-surface text-muted hover:text-brand"
+            }`}
+          >
+            {visited ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <Clock className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
+        <button
+          onClick={handleFavoriteClick}
+          disabled={favPending}
+          aria-label="즐겨찾기"
+          title="즐겨찾기"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface text-muted transition-colors hover:text-red-500"
+        >
+          <Heart
+            className={`h-3.5 w-3.5 ${
+              favorited ? "fill-red-500 text-red-500" : ""
+            }`}
+          />
+        </button>
+      </div>
+
+      <LoginRequiredModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        message="즐겨찾기는 로그인 후 이용할 수 있어요."
+      />
+
       <Link href={`/restaurants/${id}`} className="flex gap-3.5 p-3.5">
-        {/* 사진이 아직 없으므로 그라데이션 대신 차분한 플레이스홀더 */}
         <div className="relative flex h-[86px] w-[86px] shrink-0 items-center justify-center rounded-md border border-line bg-surface-muted text-muted">
           <CategoryIcon className="h-7 w-7" strokeWidth={1.4} />
-          {visited && (
-            <span className="absolute -right-1 -top-1 rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-              방문
-            </span>
-          )}
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="truncate text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+          <h3 className="truncate pr-14 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
             {name}
           </h3>
 

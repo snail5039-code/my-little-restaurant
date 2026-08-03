@@ -44,7 +44,13 @@ export default function RestaurantsView({
     () =>
       filtered
         .filter((r) => r.lat !== undefined && r.lng !== undefined)
-        .map((r) => ({ id: r.id, name: r.name, lat: r.lat!, lng: r.lng! })),
+        .map((r) => ({
+          id: r.id,
+          name: r.name,
+          lat: r.lat!,
+          lng: r.lng!,
+          memo: r.memo,
+        })),
     [filtered]
   );
 
@@ -141,6 +147,7 @@ export default function RestaurantsView({
                 key={restaurant.id}
                 {...restaurant}
                 isOwner={!!currentUserId && restaurant.ownerId === currentUserId}
+                isLoggedIn={isLoggedIn}
               />
             ))}
           </div>

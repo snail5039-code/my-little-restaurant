@@ -3,42 +3,14 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Plus, X, MapPin, Loader2, Check } from "lucide-react";
 import { createRestaurant, type ActionState } from "@/app/restaurants/actions";
+import { loadKakaoMaps } from "@/lib/kakao";
 import LoginRequiredModal from "./LoginRequiredModal";
-
-const GEOCODE_SCRIPT_ID = "kakao-maps-sdk-services";
+import CoordPickerMap from "./CoordPickerMap";
 
 const FIELD_CLASS =
   "w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand";
 const LABEL_CLASS =
   "text-[11px] font-semibold uppercase tracking-wide text-muted";
-
-function loadGeocodeScript() {
-  return new Promise<void>((resolve) => {
-    if (window.kakao?.maps?.services) {
-      resolve();
-      return;
-    }
-
-    let script = document.getElementById(
-      GEOCODE_SCRIPT_ID
-    ) as HTMLScriptElement | null;
-
-    if (!script) {
-      const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
-      script = document.createElement("script");
-      script.id = GEOCODE_SCRIPT_ID;
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appkey}&autoload=false&libraries=services`;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-
-    if (window.kakao?.maps) {
-      window.kakao.maps.load(resolve);
-      return;
-    }
-    script.addEventListener("load", () => window.kakao?.maps.load(resolve));
-  });
-}
 
 export default function RegisterRestaurantModal({
   categories,
@@ -101,7 +73,7 @@ export default function RegisterRestaurantModal({
     }
     setGeocoding(true);
     setGeocodeMsg(null);
-    await loadGeocodeScript();
+    await loadKakaoMaps();
     const kakao = window.kakao;
     if (!kakao) {
       setGeocoding(false);
@@ -249,6 +221,17 @@ export default function RegisterRestaurantModal({
                     {geocodeMsg}
                   </span>
                 )}
+
+                <p className="text-[11px] text-muted">
+                  또는 아래 지도를 클릭해서 좌표를 직접 찍을 수도 있어요.
+                </p>
+                <CoordPickerMap
+                  value={coords}
+                  onChange={(next) => {
+                    setCoords(next);
+                    setGeocodeMsg("지도에서 직접 좌표를 선택했어요.");
+                  }}
+                />
               </div>
 
               <label className="flex flex-col gap-1.5">

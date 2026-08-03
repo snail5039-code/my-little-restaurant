@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookmarkPlus, NotebookPen, MapPinned, ArrowRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import OAuthLoginButton from "@/components/OAuthLoginButton";
 import Rating from "@/components/Rating";
 
@@ -21,7 +22,16 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const nickname =
+    (user?.user_metadata?.nickname as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined) ??
+    null;
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 md:px-8 md:py-16">
       {/* 히어로 */}
@@ -41,18 +51,35 @@ export default function Home() {
           랭킹이 아니라, 내가 직접 채워가는 맛집 기록장.
         </p>
 
-        <div className="mt-7 flex flex-wrap items-center gap-2.5">
-          <OAuthLoginButton provider="kakao" />
-          <OAuthLoginButton provider="google" />
-        </div>
+        {user ? (
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Link
+              href="/restaurants"
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-strong"
+            >
+              맛집 리스트로 이동
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <span className="text-sm text-muted">
+              {nickname ? `${nickname}님, 환영해요.` : "환영해요."}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="mt-7 flex flex-wrap items-center gap-2.5">
+              <OAuthLoginButton provider="kakao" />
+              <OAuthLoginButton provider="google" />
+            </div>
 
-        <Link
-          href="/restaurants"
-          className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline"
-        >
-          먼저 둘러보기
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+            <Link
+              href="/restaurants"
+              className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline"
+            >
+              먼저 둘러보기
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </>
+        )}
       </section>
 
       {/* 카드 미리보기 — 실제 리스트가 어떻게 보이는지 */}

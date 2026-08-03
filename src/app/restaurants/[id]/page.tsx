@@ -3,15 +3,18 @@ import { notFound } from "next/navigation";
 import {
   UtensilsCrossed,
   Coffee,
-  CheckCircle2,
-  Clock,
-  Heart,
   UserRound,
   ChevronLeft,
   MapPin,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Rating from "@/components/Rating";
+import FavoriteButton from "@/components/FavoriteButton";
+import VisitedToggle from "@/components/VisitedToggle";
+import ReviewForm from "@/components/ReviewForm";
+import CommentSection from "@/components/CommentSection";
+import MenuSection from "@/components/MenuSection";
 
 export default async function RestaurantDetailPage({
   params,
@@ -19,12 +22,17 @@ export default async function RestaurantDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const supabaseServer = await createClient();
 
   const [
     { data: restaurant },
     { data: menu },
     { data: reviews },
+    { data: comments },
     { count: favoriteCount },
+    {
+      data: { user },
+    },
   ] = await Promise.all([
     supabase
       .from("restaurants")
@@ -38,17 +46,37 @@ export default async function RestaurantDetailPage({
       .order("is_representative", { ascending: false }),
     supabase
       .from("reviews")
-      .select("*")
+      .select("*, profiles(nickname)")
       .eq("restaurant_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("comments")
+      .select("*, profiles(nickname)")
+      .eq("restaurant_id", id)
+      .order("created_at", { ascending: true }),
     supabase
       .from("favorites")
       .select("*", { count: "exact", head: true })
       .eq("restaurant_id", id),
+    supabaseServer.auth.getUser(),
   ]);
 
   if (!restaurant) {
     notFound();
+  }
+
+  const isOwner = !!user && user.id === restaurant.user_id;
+  const isLoggedIn = !!user;
+
+  let isFavorited = false;
+  if (user) {
+    const { data: fav } = await supabaseServer
+      .from("favorites")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("restaurant_id", id)
+      .maybeSingle();
+    isFavorited = !!fav;
   }
 
   const categoryName =
@@ -56,30 +84,8 @@ export default async function RestaurantDetailPage({
     restaurant.food;
   const CategoryIcon = categoryName === "카페" ? Coffee : UtensilsCrossed;
 
-  const facts = [
-    {
-      label: "방문 여부",
-      icon: restaurant.visited ? CheckCircle2 : Clock,
-      iconClass: restaurant.visited ? "text-brand" : "text-muted",
-      value: restaurant.visited ? "다녀왔어요" : "아직 안 가봤어요",
-    },
-    {
-      label: "좋아요",
-      icon: Heart,
-      iconClass: "text-muted",
-      value: `${favoriteCount ?? 0}명`,
-    },
-    ...(restaurant.alone_ok !== null
-      ? [
-          {
-            label: "혼밥 난이도",
-            icon: UserRound,
-            iconClass: "text-muted",
-            value: `${restaurant.alone_ok} / 5`,
-          },
-        ]
-      : []),
-  ];
+  const chipClass =
+    "inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-xs font-medium text-muted";
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
@@ -93,8 +99,18 @@ export default async function RestaurantDetailPage({
 
       {/* 헤더 */}
       <header className="overflow-hidden rounded-lg border border-line bg-surface">
-        <div className="flex h-40 items-center justify-center border-b border-line bg-surface-muted sm:h-52">
+        <div className="relative flex h-40 items-center justify-center border-b border-line bg-surface-muted sm:h-52">
           <CategoryIcon className="h-12 w-12 text-muted" strokeWidth={1.2} />
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            {isOwner && (
+              <VisitedToggle restaurantId={restaurant.id} initialVisited={restaurant.visited} />
+            )}
+            <FavoriteButton
+              restaurantId={restaurant.id}
+              initialFavorited={isFavorited}
+              isLoggedIn={isLoggedIn}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -135,66 +151,29 @@ export default async function RestaurantDetailPage({
         </div>
 
         {/* 기본 정보 */}
-        <dl className="grid grid-cols-1 divide-y divide-line border-t border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {facts.map((fact) => (
-            <div key={fact.label} className="flex flex-col gap-1 px-5 py-3.5">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                {fact.label}
-              </dt>
-              <dd className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                <fact.icon
-                  className={`h-3.5 w-3.5 ${fact.iconClass}`}
-                  strokeWidth={2}
-                />
-                {fact.value}
-              </dd>
-            </div>
-          ))}
+        <dl className="flex flex-wrap gap-2 border-t border-line px-5 py-4">
+          <span className={chipClass}>
+            {restaurant.visited ? "✅ 방문 완료" : "🕓 아직 안 가봤어요"}
+          </span>
+          <span className={chipClass}>❤️ 좋아요 {favoriteCount ?? 0}명</span>
+          {restaurant.alone_ok !== null && (
+            <span className={chipClass}>
+              <UserRound className="h-3.5 w-3.5" strokeWidth={2} />
+              혼밥 난이도 {restaurant.alone_ok} / 5
+            </span>
+          )}
         </dl>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* 메뉴 */}
-        <section className="rounded-lg border border-line bg-surface">
-          <h2 className="border-b border-line px-5 py-3 text-sm font-bold text-foreground">
-            메뉴
-          </h2>
-          {menu && menu.length > 0 ? (
-            <ul className="divide-y divide-line">
-              {menu.map((item) => (
-                <li key={item.id} className="flex items-start gap-3 px-5 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                      {item.name}
-                      {item.is_representative && (
-                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand">
-                          대표
-                        </span>
-                      )}
-                    </p>
-                    {item.description && (
-                      <p className="mt-0.5 text-xs text-muted">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                  {item.price !== null && (
-                    <span className="tnum shrink-0 text-[13px] text-muted">
-                      {item.price.toLocaleString()}원
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="px-5 py-8 text-center text-[13px] text-muted">
-              등록된 메뉴가 없어요.
-            </p>
-          )}
-        </section>
+      <MenuSection
+        restaurantId={restaurant.id}
+        menu={menu ?? []}
+        isOwner={isOwner}
+      />
 
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* 리뷰 */}
-        <section className="rounded-lg border border-line bg-surface">
+        <section className="flex flex-col rounded-lg border border-line bg-surface">
           <h2 className="flex items-baseline gap-1.5 border-b border-line px-5 py-3 text-sm font-bold text-foreground">
             리뷰
             <span className="tnum text-xs font-normal text-muted">
@@ -205,9 +184,13 @@ export default async function RestaurantDetailPage({
             <ul className="divide-y divide-line">
               {reviews.map((review) => (
                 <li key={review.id} className="px-5 py-3.5">
-                  {review.rating !== null && (
-                    <Rating value={review.rating} size={12} />
-                  )}
+                  <div className="flex items-center gap-2">
+                    {review.rating !== null && <Rating value={review.rating} size={12} />}
+                    <span className="text-xs text-muted">
+                      {(review as unknown as { profiles?: { nickname: string } }).profiles
+                        ?.nickname ?? "익명"}
+                    </span>
+                  </div>
                   {review.content && (
                     <p className="mt-1.5 text-[13px] leading-relaxed text-foreground">
                       {review.content}
@@ -221,7 +204,20 @@ export default async function RestaurantDetailPage({
               아직 리뷰가 없어요.
             </p>
           )}
+          <ReviewForm restaurantId={restaurant.id} isLoggedIn={isLoggedIn} />
         </section>
+
+        {/* 댓글 */}
+        <CommentSection
+          restaurantId={restaurant.id}
+          comments={(comments ?? []) as unknown as {
+            id: number;
+            content: string;
+            created_at: string;
+            profiles?: { nickname: string } | null;
+          }[]}
+          isLoggedIn={isLoggedIn}
+        />
       </div>
     </main>
   );

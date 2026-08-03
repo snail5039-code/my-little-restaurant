@@ -6,9 +6,14 @@ declare global {
     getLng(): number;
   }
 
-  type KakaoMapInstance = object;
+  interface KakaoMapInstance {
+    setCenter(latlng: KakaoLatLng): void;
+  }
 
-  type KakaoMarker = object;
+  interface KakaoMarker {
+    setPosition(latlng: KakaoLatLng): void;
+    setMap(map: KakaoMapInstance | null): void;
+  }
 
   interface KakaoInfoWindow {
     open(map: KakaoMapInstance, marker: KakaoMarker): void;
@@ -26,6 +31,10 @@ declare global {
     ): void;
   }
 
+  interface KakaoMouseEvent {
+    latLng: KakaoLatLng;
+  }
+
   interface KakaoMapsSDK {
     load(callback: () => void): void;
     LatLng: new (lat: number, lng: number) => KakaoLatLng;
@@ -40,9 +49,9 @@ declare global {
     InfoWindow: new (options: { content: string }) => KakaoInfoWindow;
     event: {
       addListener(
-        target: KakaoMarker,
+        target: KakaoMarker | KakaoMapInstance,
         type: string,
-        handler: () => void
+        handler: (event: KakaoMouseEvent) => void
       ): void;
     };
     services: {

@@ -17,6 +17,11 @@ export default async function RestaurantsPage() {
     supabaseServer.auth.getUser(),
   ]);
 
+  const { data: myFavorites } = user
+    ? await supabaseServer.from("favorites").select("restaurant_id").eq("user_id", user.id)
+    : { data: [] as { restaurant_id: number }[] };
+  const favoritedIds = new Set((myFavorites ?? []).map((f) => f.restaurant_id));
+
   const cards = (restaurants ?? []).map((restaurant: Restaurant) => ({
     id: restaurant.id,
     name: restaurant.name,
@@ -29,6 +34,7 @@ export default async function RestaurantsPage() {
     lat: restaurant.latitude ?? undefined,
     lng: restaurant.longitude ?? undefined,
     ownerId: restaurant.user_id,
+    isFavorited: favoritedIds.has(restaurant.id),
   }));
 
   return (

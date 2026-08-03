@@ -3,12 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Home, UtensilsCrossed, CircleUserRound, Menu, X } from "lucide-react";
+import {
+  Home,
+  UtensilsCrossed,
+  CircleUserRound,
+  Menu,
+  X,
+  MessagesSquare,
+} from "lucide-react";
 import AuthStatus from "./AuthStatus";
 
 const NAV_ITEMS = [
   { href: "/", label: "홈", icon: Home },
   { href: "/restaurants", label: "맛집 리스트", icon: UtensilsCrossed },
+  { href: "/board", label: "커뮤니티", icon: MessagesSquare },
   { href: "/mypage", label: "마이페이지", icon: CircleUserRound },
 ];
 
