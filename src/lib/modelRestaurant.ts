@@ -105,7 +105,7 @@ export type ModelRestaurantSearchResult = {
   usedKeyword: string;
 };
 
-const MAX_REGION_RESULTS = 30;
+const MAX_REGION_RESULTS = 100; // API가 허용하는 한 페이지 최대 건수
 
 export async function searchModelRestaurantsByRegion(
   regionInput: string

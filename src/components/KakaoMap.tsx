@@ -30,6 +30,15 @@ const CERTIFIED_MARKER_IMAGE =
     </svg>`
   );
 
+const CURRENT_LOCATION_IMAGE =
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+      <circle cx="11" cy="11" r="10" fill="#2563eb" fill-opacity="0.22"/>
+      <circle cx="11" cy="11" r="6" fill="#2563eb" stroke="#fff" stroke-width="2.5"/>
+    </svg>`
+  );
+
 function escapeHtml(text: string) {
   return text
     .replace(/&/g, "&amp;")
@@ -56,7 +65,7 @@ export default function KakaoMap({
       const kakao = window.kakao;
       if (!kakao) return;
 
-      const centerSource = markers[0] ?? certifiedMarkers[0];
+      const centerSource = certifiedMarkers[0] ?? markers[0];
       const center = centerSource
         ? new kakao.maps.LatLng(centerSource.lat, centerSource.lng)
         : new kakao.maps.LatLng(37.5665, 126.978);
@@ -126,6 +135,34 @@ export default function KakaoMap({
           infowindow.open(map, kakaoMarker);
         });
       });
+
+      // 검색된 모범업소가 없을 때(기본 지도 보기)만 실제 내 위치로 중심을 옮긴다.
+      // 지역 검색 결과가 있으면 그 지역을 계속 보여줘야 하므로 내 위치로 되돌아가지 않는다.
+      if (certifiedMarkers.length === 0 && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (cancelled) return;
+            const myLatLng = new kakao.maps.LatLng(
+              position.coords.latitude,
+              position.coords.longitude
+            );
+            map.setCenter(myLatLng);
+            new kakao.maps.Marker({
+              position: myLatLng,
+              map,
+              image: new kakao.maps.MarkerImage(
+                CURRENT_LOCATION_IMAGE,
+                new kakao.maps.Size(22, 22)
+              ),
+              zIndex: 10,
+            });
+          },
+          () => {
+            // 위치 권한 거부/실패 시 기존 중심(내 맛집·검색 결과 또는 서울시청) 유지
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+        );
+      }
     });
 
     return () => {

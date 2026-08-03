@@ -1,10 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Search, Loader2, X } from "lucide-react";
 import { searchModelRestaurantsByRegion } from "@/lib/modelRestaurant";
 import { loadKakaoMaps } from "@/lib/kakao";
 import type { CertifiedMapMarker } from "./KakaoMap";
+
+const GEOCODE_CONCURRENCY = 8;
+
+// Geocoder.addressSearch를 한 번에 다 쏘면 일부가 조용히 실패해서 지도에 덜 찍히는
+// 경우가 있어, 동시에 GEOCODE_CONCURRENCY개씩만 돌린다.
+async function geocodeWithLimit<T, R>(
+  items: T[],
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+
+  async function runNext(): Promise<void> {
+    const current = cursor++;
+    if (current >= items.length) return;
+    results[current] = await worker(items[current]);
+    await runNext();
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(GEOCODE_CONCURRENCY, items.length) }, runNext)
+  );
+  return results;
+}
 
 export default function NearbyModelRestaurantSearch({
   onResults,
@@ -15,10 +39,14 @@ export default function NearbyModelRestaurantSearch({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [hasResults, setHasResults] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = async () => {
     const trimmed = region.trim();
     if (!trimmed || loading) return;
+
+    // 검색을 시작하자마자 포커스를 떼서 모바일 자판이 바로 내려가게 한다.
+    inputRef.current?.blur();
 
     setLoading(true);
     setStatus(null);
@@ -42,29 +70,25 @@ export default function NearbyModelRestaurantSearch({
       }
       const geocoder = new kakao.maps.services.Geocoder();
 
-      const geocoded = await Promise.all(
-        items.map(
-          (item) =>
-            new Promise<CertifiedMapMarker | null>((resolve) => {
-              geocoder.addressSearch(item.address, (geoResult, geoStatus) => {
-                if (
-                  geoStatus === kakao.maps.services.Status.OK &&
-                  geoResult[0]
-                ) {
-                  resolve({
-                    id: `${item.name}-${item.address}`,
-                    name: item.name,
-                    address: item.address,
-                    foodType: item.foodType,
-                    lat: Number(geoResult[0].y),
-                    lng: Number(geoResult[0].x),
-                  });
-                } else {
-                  resolve(null);
-                }
-              });
-            })
-        )
+      const geocoded = await geocodeWithLimit(
+        items,
+        (item) =>
+          new Promise<CertifiedMapMarker | null>((resolve) => {
+            geocoder.addressSearch(item.address, (geoResult, geoStatus) => {
+              if (geoStatus === kakao.maps.services.Status.OK && geoResult[0]) {
+                resolve({
+                  id: `${item.name}-${item.address}`,
+                  name: item.name,
+                  address: item.address,
+                  foodType: item.foodType,
+                  lat: Number(geoResult[0].y),
+                  lng: Number(geoResult[0].x),
+                });
+              } else {
+                resolve(null);
+              }
+            });
+          })
       );
 
       const markers = geocoded.filter((m): m is CertifiedMapMarker => m !== null);
@@ -94,6 +118,7 @@ export default function NearbyModelRestaurantSearch({
       <div className="flex flex-wrap items-center gap-2">
         <Search className="h-4 w-4 shrink-0 text-muted" />
         <input
+          ref={inputRef}
           value={region}
           onChange={(e) => setRegion(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}

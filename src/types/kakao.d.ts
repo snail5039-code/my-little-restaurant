@@ -61,6 +61,7 @@ declare global {
       position: KakaoLatLng;
       map?: KakaoMapInstance;
       image?: KakaoMarkerImage;
+      zIndex?: number;
     }) => KakaoMarker;
     InfoWindow: new (options: { content: string }) => KakaoInfoWindow;
     event: {
