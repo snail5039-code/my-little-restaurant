@@ -191,7 +191,7 @@ export default function RestaurantCard({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="truncate pr-14 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
+          <h3 className="truncate pr-32 text-[15px] font-bold leading-snug text-foreground transition-colors group-hover:text-brand">
             {name}
           </h3>
 

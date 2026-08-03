@@ -59,6 +59,7 @@ export default async function Home() {
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(1)
         .maybeSingle();
       previewRestaurant = ownRow ?? null;
@@ -124,9 +125,17 @@ export default async function Home() {
       {/* 카드 미리보기 — 내가 즐겨찾기했거나 등록한 가게로 리스트가 어떻게 보이는지 보여준다 */}
       {previewCard && (
         <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
-            내 리스트 미리보기
-          </p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+              내 리스트 미리보기
+            </p>
+            <Link
+              href="/restaurants"
+              className="text-[11px] font-semibold text-brand hover:underline"
+            >
+              전체 리스트 보기
+            </Link>
+          </div>
           <div className="mt-3 max-w-md">
             <RestaurantCard
               {...previewCard}
