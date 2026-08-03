@@ -35,9 +35,24 @@ declare global {
     latLng: KakaoLatLng;
   }
 
+  interface KakaoSize {
+    width: number;
+    height: number;
+  }
+
+  interface KakaoMarkerImage {
+    __brand: "KakaoMarkerImage";
+  }
+
   interface KakaoMapsSDK {
     load(callback: () => void): void;
     LatLng: new (lat: number, lng: number) => KakaoLatLng;
+    Size: new (width: number, height: number) => KakaoSize;
+    MarkerImage: new (
+      src: string,
+      size: KakaoSize,
+      options?: Record<string, unknown>
+    ) => KakaoMarkerImage;
     Map: new (
       container: HTMLElement,
       options: { center: KakaoLatLng; level: number }
@@ -45,6 +60,7 @@ declare global {
     Marker: new (options: {
       position: KakaoLatLng;
       map?: KakaoMapInstance;
+      image?: KakaoMarkerImage;
     }) => KakaoMarker;
     InfoWindow: new (options: { content: string }) => KakaoInfoWindow;
     event: {

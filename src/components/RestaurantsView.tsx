@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { Map as MapIcon, LayoutGrid, Search, SearchX } from "lucide-react";
 import RestaurantCard, { type RestaurantCardData } from "./RestaurantCard";
-import KakaoMap from "./KakaoMap";
+import KakaoMap, { type CertifiedMapMarker } from "./KakaoMap";
 import RegisterRestaurantModal from "./RegisterRestaurantModal";
 import RecommendModal from "./RecommendModal";
+import NearbyModelRestaurantSearch from "./NearbyModelRestaurantSearch";
 
 type View = "card" | "map";
 
@@ -28,6 +29,9 @@ export default function RestaurantsView({
   const [view, setView] = useState<View>("card");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [certifiedMarkers, setCertifiedMarkers] = useState<CertifiedMapMarker[]>(
+    []
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -174,8 +178,11 @@ export default function RestaurantsView({
           </div>
         )
       ) : (
-        <div className="overflow-hidden rounded-lg border border-line">
-          <KakaoMap markers={markers} />
+        <div className="flex flex-col gap-2">
+          <NearbyModelRestaurantSearch onResults={setCertifiedMarkers} />
+          <div className="overflow-hidden rounded-lg border border-line">
+            <KakaoMap markers={markers} certifiedMarkers={certifiedMarkers} />
+          </div>
         </div>
       )}
     </div>

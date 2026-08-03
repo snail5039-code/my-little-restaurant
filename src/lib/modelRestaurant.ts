@@ -1,3 +1,5 @@
+"use server";
+
 // 행정안전부_모범음식점정보 조회서비스 (data.go.kr, 15155052)
 // Base URL: apis.data.go.kr/1741000/excellent_restaurant_info
 // 제공 필드: 업소명/주소/전화번호/음식유형/지정일자 등 — 메뉴 정보는 제공하지 않음.
@@ -88,5 +90,78 @@ export async function checkModelRestaurant(
     };
   } catch {
     return null;
+  }
+}
+
+export type ModelRestaurantSearchItem = {
+  name: string;
+  address: string;
+  foodType: string;
+};
+
+export type ModelRestaurantSearchResult = {
+  items: ModelRestaurantSearchItem[];
+  totalCount: number;
+  usedKeyword: string;
+};
+
+const MAX_REGION_RESULTS = 30;
+
+export async function searchModelRestaurantsByRegion(
+  regionInput: string
+): Promise<ModelRestaurantSearchResult> {
+  // 이 API의 cond[...::LIKE] 검색어는 공백이 들어가면 매칭이 전부 0건이 되는 걸
+  // 실제 호출로 확인함 — "서울특별시 강남구"는 0건, "강남구"만 넣으면 정상 매칭.
+  // 그래서 사용자가 여러 단어를 입력해도 첫 단어만 검색어로 쓴다.
+  const region = regionInput.trim().split(/\s+/)[0] ?? "";
+  const serviceKey = process.env.DATA_GO_KR_SERVICE_KEY;
+  if (!serviceKey || !region) {
+    return { items: [], totalCount: 0, usedKeyword: region };
+  }
+
+  const params = new URLSearchParams({
+    serviceKey,
+    pageNo: "1",
+    numOfRows: String(MAX_REGION_RESULTS),
+    returnType: "JSON",
+    "cond[ROAD_NM_ADDR::LIKE]": region,
+  });
+
+  try {
+    const res = await fetch(`${BASE_URL}?${params.toString()}`, {
+      next: { revalidate: 60 * 60 * 24 },
+    });
+    if (!res.ok) return { items: [], totalCount: 0, usedKeyword: region };
+
+    const data = await res.json();
+    const resultCode = data?.response?.header?.resultCode;
+    if (resultCode === undefined || String(resultCode).startsWith("-")) {
+      return { items: [], totalCount: 0, usedKeyword: region };
+    }
+
+    const rawItems = data?.response?.body?.items?.item;
+    const items: ModelRestaurantItem[] = Array.isArray(rawItems)
+      ? rawItems
+      : rawItems
+        ? [rawItems]
+        : [];
+
+    const active = items
+      .filter(
+        (item) => item.SALS_STTS_NM?.includes("영업") && !item.DSGN_RTRCN_YMD
+      )
+      .map((item) => ({
+        name: item.BSNSSP_NM,
+        address: item.ROAD_NM_ADDR || item.LCTN_ADDR,
+        foodType: item.FD_OF_TYPE || item.PRINC_FD_KND || "",
+      }));
+
+    return {
+      items: active,
+      totalCount: Number(data?.response?.body?.totalCount ?? active.length),
+      usedKeyword: region,
+    };
+  } catch {
+    return { items: [], totalCount: 0, usedKeyword: region };
   }
 }
