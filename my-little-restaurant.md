@@ -1,0 +1,144 @@
+# 나만의 작은 맛집 — 기획문서
+
+## 1. 서비스 개요
+
+- **서비스명**: 나만의 작은 맛집
+- **한 줄 설명**: 혼밥 또는 친구들과 먹기 좋은 식당들을 저장 및 추천 해주면서 체크할 수 있는 앱
+- **컨셉**: 맛집 도장깨기 — 가고 싶은 식당을 저장해두고, 다녀온 곳은 체크하면서 별점/메모를 남기는 개인 맛집 기록 서비스
+
+## 2. 기술 스택
+
+| 구분 | 선택 | 비고 |
+| --- | --- | --- |
+| 프레임워크 | Next.js (App Router) | 프론트+API Route를 한 프로젝트에서 처리 |
+| DB / 인증 / (추후) 파일 저장 | Supabase | Postgres DB + Auth + Storage 제공 |
+| 지도 | 카카오맵 API | 국내 주소/좌표 정확도가 높음 |
+| 로그인 | 소셜 로그인 (카카오, 구글) | Supabase Auth의 OAuth Provider 기능 사용 |
+
+> Supabase Auth를 쓰면 이메일/비밀번호는 `auth.users`(Supabase 내부 테이블)에서 자동 관리되므로, 서비스에서 직접 만드는 `profiles` 테이블에는 비밀번호를 저장하지 않습니다.
+
+## 3. 테이블 설계 (ERD)
+
+### profiles (유저 프로필)
+
+> Supabase Auth의 `auth.users`와 1:1로 연결되는 확장 테이블. `id`는 `auth.users.id`(uuid)를 그대로 사용.
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | auth.users.id 참조 (uuid, PK) |
+| 2 | nickname | 닉네임 |
+| 3 | phone | 전화번호 (선택) |
+| 4 | provider | 로그인 경로 (kakao/google) |
+| 5 | role | 일반/관리자 |
+| 6 | created_at | 가입일 (자동) |
+| 7 | updated_at | 수정일 |
+
+### categories (카테고리)
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | (자동) |
+| 2 | name | 카테고리명 (한식/중식/일식/양식/카페 등) |
+| 3 | created_at | (자동) |
+
+### restaurants (식당)
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | (자동) |
+| 2 | name | 식당 이름 |
+| 3 | category_id | categories 테이블 참조 |
+| 4 | address | 주소 |
+| 5 | latitude | 위도 (카카오맵 좌표) |
+| 6 | longitude | 경도 (카카오맵 좌표) |
+| 7 | visited | 다녀왔는지 (true/false) |
+| 8 | alone_ok | 혼밥 난이도 (1~5) |
+| 9 | rating | 별점 (1~5, 안 갔으면 비움) |
+| 10 | memo | 한 줄 메모 |
+| 11 | user_id | profiles 참조 (누가 등록했는지) |
+| 12 | created_at | (자동) |
+
+### reviews (리뷰)
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | (자동) |
+| 2 | user_id | profiles 참조 |
+| 3 | restaurant_id | restaurants 참조 |
+| 4 | rating | 별점 |
+| 5 | content | 내용 |
+| 6 | created_at | 작성일 |
+| 7 | updated_at | 수정일 |
+
+### favorites (좋아요/즐겨찾기)
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | (자동) |
+| 2 | user_id | profiles 참조 |
+| 3 | restaurant_id | restaurants 참조 |
+| 4 | created_at | 좋아요 클릭일 |
+
+### menu (메뉴)
+
+| # | 컬럼명 | 설명 |
+| --- | --- | --- |
+| 1 | id | (자동) |
+| 2 | restaurant_id | restaurants 참조 |
+| 3 | name | 메뉴 이름 |
+| 4 | price | 메뉴 가격 |
+| 5 | description | 메뉴 설명 |
+| 6 | is_representative | 대표 메뉴 여부 (true/false) |
+
+### 테이블 관계
+
+- `auth.users` 1 : 1 `profiles`
+- `profiles` 1 : N `restaurants` (한 유저가 여러 식당을 등록)
+- `profiles` 1 : N `reviews`
+- `profiles` 1 : N `favorites`
+- `categories` 1 : N `restaurants`
+- `restaurants` 1 : N `reviews`
+- `restaurants` 1 : N `favorites`
+- `restaurants` 1 : N `menu`
+
+## 4. 화면 구성
+
+### 4-1. 메인 화면 (`/`)
+
+- **사이드바**: 좌측 고정 네비게이션
+- **중앙**: 간단한 웹사이트 설명 (사진 포함)
+- **우측**: 시작하기 및 사용 방법 안내
+- **우상단**: 회원가입 버튼 → 카카오/구글 소셜 로그인으로 연결
+
+### 4-2. 맛집 카드 리스트 / 지도 화면 (`/restaurants`)
+
+- 상단에 **"카드 형식으로만 보기 / 지도로만 보기"** 토글 버튼
+- **카드 뷰**: 맛집 카드(별점, 리뷰수, 상세보기)를 그리드로 나열, 카드에 메모장 기능 포함
+- **지도 뷰**: 카카오맵 위에 `latitude`/`longitude` 기준으로 핀 표시, 핀 클릭 시 카드 정보 노출
+
+### 4-3. 맛집 상세 화면 (`/restaurants/[id]`)
+
+- 가게 사진
+- 카테고리 / 가게 설명
+- 평점
+- 방문 여부 / 좋아요 수 / 혼밥 난이도
+- 리뷰 수 / 리뷰 내용
+- 메뉴 목록
+
+### 4-4. 마이페이지 (`/mypage`)
+
+- **좌측**: 최애 맛집 및 방문한 수를 간단하게 요약 표시 (카드형 요약 박스 3개)
+- **우측**: 개인정보 수정 (토글로 열었다 닫을 수 있게), 닉네임/전화번호 등 입력 필드 (이메일/비밀번호는 소셜 로그인 계정 정보이므로 수정 불가)
+
+## 5. 인증 흐름
+
+1. 사용자가 "회원가입/로그인" 클릭 → 카카오 또는 구글 OAuth 화면으로 이동
+2. Supabase Auth가 로그인 처리 후 `auth.users`에 계정 생성/조회
+3. 최초 로그인 시 `profiles` 테이블에 해당 `user_id`로 프로필 row 생성 (닉네임 기본값은 소셜 계정 이름)
+4. 이후 서비스 내 모든 데이터(restaurants, reviews, favorites)는 `profiles.id` 기준으로 연결
+
+## 6. 미구현 (차후 구현 예정)
+
+- 사진 업로드 (Supabase Storage 연동 예정)
+- 친구 팔로우
+- 댓글
