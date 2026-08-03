@@ -150,3 +150,20 @@
 - **배포 관련**: 배포 경험 자체가 적어서 불안해하는 편(실력 문제라기보다 경험 부족). Vercel 배포/환경변수 설정 등은 진행 전후로 어떤 단계인지, 왜 필요한지 짧게 짚어주고 실패 시 원인을 명확히 짚어줄 것.
 - **협업 방식**: 설명보다 실행 우선. 배포, 계정 설정 변경처럼 승인이 필요한 작업이 아니면 먼저 진행하고 결과를 보고한다.
 - **설명 스타일**: 적당히 자세하게 — 핵심 변경 사항과 이유 정도만 전달. 불필요한 배경 설명이나 장황한 부연은 생략.
+
+## 8. 진행 상황 (2026-08-03 기준)
+
+**완료**
+- 라우트 구조: `/`(랜딩), `/restaurants`(카드·지도 토글), `/restaurants/[id]`(상세), `/mypage`
+- 공통 사이드바 레이아웃, 맛집 카드 컴포넌트
+- Supabase 스키마: restaurants/categories/profiles/reviews/favorites/menu + RLS (프로젝트 ID `fttlyjldmxzybkzkjfng`, 서울 리전)
+- 카카오맵 연동 (`src/components/KakaoMap.tsx`) — Kakao Developers 앱 "나만의 작은 맛집"(ID 1532223)의 JS 키 사용, 로컬/Vercel 도메인 등록 완료
+- 카카오 + 구글 소셜 로그인 (Supabase Auth, `@supabase/ssr`) — 로그인 시 `handle_new_user` 트리거로 profiles row 자동 생성, `/mypage`는 로그인 필요
+  - Kakao: Kakao Developers 앱의 카카오 로그인 활성화, 동의항목(닉네임/프로필사진) 필수 설정, Redirect URI 등록 완료
+  - Google: GCP 프로젝트 "my-little-restaurant" 생성, OAuth 동의화면 설정 후 **프로덕션으로 게시 완료** (테스트 사용자 제한 없음, 민감 스코프 미사용이라 검증 불필요)
+
+**남은 것 / 다음 세션 시작점**
+- ⚠️ Vercel 환경변수에 `NEXT_PUBLIC_KAKAO_MAP_KEY` 아직 미등록 — 로컬 `.env.local`에만 있음. 배포본에서 지도가 안 뜨면 이것부터 확인
+- 마이페이지(`/mypage`)가 아직 실제 로그인 사용자 데이터(즐겨찾기, 방문 수, 프로필 수정)를 연동하지 않고 정적 placeholder 상태
+- 리뷰 작성, 즐겨찾기 토글, 맛집 등록 폼 등 쓰기(write) 기능 전반 미구현 (지금까지는 조회 위주)
+- 사진 업로드(Supabase Storage), 친구 팔로우, 댓글은 기획 단계에서도 "차후 구현"으로 분류됨 (6번 항목 참고)
