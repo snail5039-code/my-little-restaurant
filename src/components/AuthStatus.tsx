@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import OAuthLoginButton from "./OAuthLoginButton";
 
@@ -11,7 +12,12 @@ export default function AuthStatus() {
   useEffect(() => {
     const supabase = createClient();
 
-    const readUser = (user: { user_metadata?: Record<string, unknown>; email?: string } | null | undefined) => {
+    const readUser = (
+      user:
+        | { user_metadata?: Record<string, unknown>; email?: string }
+        | null
+        | undefined
+    ) => {
       const metadata = user?.user_metadata ?? {};
       const name =
         (metadata.nickname as string | undefined) ??
@@ -43,38 +49,38 @@ export default function AuthStatus() {
   };
 
   if (loading) {
-    return null;
+    return <div className="h-[76px]" />;
   }
 
   if (!nickname) {
     return (
-      <div className="flex flex-col gap-2">
-        <OAuthLoginButton
-          provider="kakao"
-          className="rounded-lg bg-[#FEE500] px-3 py-2 text-sm font-medium text-black/85 transition-colors hover:brightness-95"
-        >
-          카카오 로그인
-        </OAuthLoginButton>
-        <OAuthLoginButton
-          provider="google"
-          className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-200"
-        >
-          구글 로그인
-        </OAuthLoginButton>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface-muted p-3">
+        <p className="text-xs leading-relaxed text-muted">
+          로그인하면 나만의 맛집을 저장할 수 있어요.
+        </p>
+        <OAuthLoginButton provider="kakao" size="sm" fullWidth label="카카오" />
+        <OAuthLoginButton provider="google" size="sm" fullWidth label="Google" />
       </div>
     );
   }
 
+  const initial = nickname.trim().charAt(0).toUpperCase();
+
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-orange-100/60 p-3 text-sm dark:bg-neutral-800">
-      <span className="font-medium text-neutral-800 dark:text-neutral-200">
-        {nickname}님
+    <div className="flex items-center gap-2.5 rounded-lg border border-line bg-surface-muted p-2.5">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+        {initial}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+        {nickname}
       </span>
       <button
         onClick={handleLogout}
-        className="text-left text-xs text-neutral-500 hover:underline dark:text-neutral-400"
+        aria-label="로그아웃"
+        title="로그아웃"
+        className="shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-surface hover:text-foreground"
       >
-        로그아웃
+        <LogOut className="h-4 w-4" />
       </button>
     </div>
   );

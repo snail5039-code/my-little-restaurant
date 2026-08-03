@@ -25,19 +25,27 @@ export default async function RestaurantsPage() {
     rating: restaurant.rating ?? undefined,
     aloneOk: restaurant.alone_ok ?? undefined,
     memo: restaurant.memo,
+    visited: restaurant.visited,
     lat: restaurant.latitude ?? undefined,
     lng: restaurant.longitude ?? undefined,
     ownerId: restaurant.user_id,
   }));
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-      <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-        맛집 리스트
-      </h1>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+      <header>
+        <h1 className="text-[22px] font-bold tracking-tight text-foreground">
+          맛집 리스트
+        </h1>
+        <p className="mt-1 text-[13px] text-muted">
+          저장한 가게를 카드와 지도로 확인하고, 메모를 남겨보세요.
+        </p>
+      </header>
 
       {error && (
-        <p className="text-red-500">목록을 불러오지 못했습니다: {error.message}</p>
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+          목록을 불러오지 못했습니다: {error.message}
+        </p>
       )}
 
       <RestaurantsView

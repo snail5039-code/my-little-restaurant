@@ -1,27 +1,58 @@
 @import "tailwindcss";
 
+/*
+  디자인 토큰. 색을 컴포넌트마다 하드코딩하지 않고 여기서 한 번만 정의한다.
+  brand 는 타베로그 계열의 붉은 주황(기본 orange-500 보다 채도를 낮추고 붉게).
+*/
 :root {
-  --background: #f7f5f2;
+  --background: #f4f2ef;
+  --surface: #ffffff;
+  --surface-muted: #faf9f7;
   --foreground: #1c1917;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --muted: #78716c;
+  --line: #e4e1dc;
+  --brand: #d24d17;
+  --brand-strong: #a93a0f;
+  --star: #f0a020;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #131110;
-    --foreground: #f2f0ee;
+    --background: #14120f;
+    --surface: #1e1b18;
+    --surface-muted: #26221e;
+    --foreground: #f5f3f0;
+    --muted: #a8a29e;
+    --line: #322d28;
+    --brand: #f2703a;
+    --brand-strong: #ff8b58;
+    --star: #f5b53f;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-star: var(--star);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "Apple SD Gothic Neo", "Malgun Gothic",
-    -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-geist-sans), "Pretendard", "Apple SD Gothic Neo",
+    "Malgun Gothic", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자(평점·가격)는 폭이 흔들리지 않게 고정폭 숫자를 쓴다 */
+.tnum {
+  font-variant-numeric: tabular-nums;
 }

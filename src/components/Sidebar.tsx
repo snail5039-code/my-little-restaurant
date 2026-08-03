@@ -12,29 +12,47 @@ const NAV_ITEMS = [
   { href: "/mypage", label: "마이페이지", icon: CircleUserRound },
 ];
 
+function Wordmark() {
+  return (
+    <Link href="/" className="flex items-center gap-2">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
+        <UtensilsCrossed className="h-4 w-4" strokeWidth={2.2} />
+      </span>
+      <span className="text-[15px] font-bold tracking-tight text-foreground">
+        나만의 작은 맛집
+      </span>
+    </Link>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col">
       {NAV_ITEMS.map((item) => {
         const isActive =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
         return (
           <Link
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+            aria-current={isActive ? "page" : undefined}
+            className={`relative flex items-center gap-2.5 py-2.5 pl-4 pr-3 text-sm transition-colors ${
               isActive
-                ? "bg-orange-500 text-white shadow-sm shadow-orange-500/20"
-                : "text-neutral-600 hover:bg-orange-100/70 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                ? "font-semibold text-brand"
+                : "text-muted hover:text-foreground"
             }`}
           >
-            <item.icon className="h-4 w-4" />
+            {/* 활성 표시는 배경을 꽉 채우는 대신 왼쪽 얇은 막대로 */}
+            <span
+              className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand transition-opacity ${
+                isActive ? "opacity-100" : "opacity-0"
+              }`}
+            />
+            <item.icon className="h-4 w-4" strokeWidth={isActive ? 2.4 : 1.8} />
             {item.label}
           </Link>
         );
@@ -48,14 +66,13 @@ export default function Sidebar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-black/5 bg-white/90 px-4 py-3 backdrop-blur md:hidden dark:border-white/5 dark:bg-neutral-950/90">
-        <span className="text-lg font-bold tracking-tight text-orange-600 dark:text-orange-400">
-          나만의 작은 맛집
-        </span>
+      {/* 모바일: 상단 바 */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/95 px-4 py-2.5 backdrop-blur md:hidden">
+        <Wordmark />
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="메뉴 열기"
-          className="rounded-lg p-1.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -67,33 +84,32 @@ export default function Sidebar() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col gap-6 bg-white p-4 shadow-xl dark:bg-neutral-950">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                나만의 작은 맛집
-              </span>
+          <div className="absolute inset-y-0 left-0 flex w-[17rem] max-w-[82vw] flex-col gap-5 border-r border-line bg-surface py-4 shadow-2xl">
+            <div className="flex items-center justify-between px-4">
+              <Wordmark />
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label="메뉴 닫기"
-                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="rounded-md p-1.5 text-muted hover:bg-surface-muted"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <NavLinks onNavigate={() => setMobileOpen(false)} />
-            <div className="mt-auto">
+            <div className="mt-auto px-4">
               <AuthStatus />
             </div>
           </div>
         </div>
       )}
 
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-6 border-r border-black/5 bg-white/60 p-5 md:flex dark:border-white/5 dark:bg-neutral-950/40">
-        <div className="px-1 text-lg font-bold tracking-tight text-orange-600 dark:text-orange-400">
-          나만의 작은 맛집
+      {/* 데스크톱: 좌측 고정 사이드바 */}
+      <aside className="sticky top-0 hidden h-screen w-[15rem] shrink-0 flex-col gap-6 border-r border-line bg-surface py-5 md:flex">
+        <div className="px-4">
+          <Wordmark />
         </div>
         <NavLinks />
-        <div className="mt-auto">
+        <div className="mt-auto px-4">
           <AuthStatus />
         </div>
       </aside>

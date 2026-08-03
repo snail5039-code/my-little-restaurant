@@ -66,5 +66,5 @@ export default function KakaoMap({ markers }: { markers: MapMarker[] }) {
     return () => script?.removeEventListener("load", initMap);
   }, [markers]);
 
-  return <div ref={mapRef} className="h-[500px] w-full rounded-2xl" />;
+  return <div ref={mapRef} className="h-[420px] w-full sm:h-[540px]" />;
 }

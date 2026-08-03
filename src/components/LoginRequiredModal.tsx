@@ -1,6 +1,7 @@
 "use client";
 
-import { X, LogIn } from "lucide-react";
+import { useEffect } from "react";
+import { X, Lock } from "lucide-react";
 import OAuthLoginButton from "./OAuthLoginButton";
 
 export default function LoginRequiredModal({
@@ -12,51 +13,60 @@ export default function LoginRequiredModal({
   onClose: () => void;
   message?: string;
 }) {
+  // ESC로 닫기 + 열려 있는 동안 뒤 배경 스크롤 잠금
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="login-required-title"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-neutral-900"
+        className="relative w-full max-w-[22rem] rounded-xl border border-line bg-surface p-6 shadow-2xl"
       >
         <button
           onClick={onClose}
-          className="ml-auto text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
           aria-label="닫기"
+          className="absolute right-3 top-3 rounded-md p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
 
-        <div className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-orange-500 dark:bg-orange-900/40">
-          <LogIn className="h-6 w-6" />
-        </div>
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface-muted text-brand">
+          <Lock className="h-5 w-5" strokeWidth={1.8} />
+        </span>
 
-        <div>
-          <h2 className="font-bold text-neutral-900 dark:text-neutral-50">
-            로그인이 필요해요
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            {message}
-          </p>
-        </div>
+        <h2
+          id="login-required-title"
+          className="mt-4 text-[17px] font-bold text-foreground"
+        >
+          로그인이 필요해요
+        </h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+          {message}
+        </p>
 
-        <div className="flex w-full flex-col gap-2">
-          <OAuthLoginButton
-            provider="kakao"
-            className="w-full rounded-full bg-[#FEE500] px-5 py-2 text-sm font-semibold text-black/85 shadow-sm transition-colors hover:brightness-95"
-          >
-            카카오로 로그인
-          </OAuthLoginButton>
-          <OAuthLoginButton
-            provider="google"
-            className="w-full rounded-full border border-black/10 bg-white px-5 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-200"
-          >
-            구글로 로그인
-          </OAuthLoginButton>
+        <div className="mt-5 flex flex-col gap-2">
+          <OAuthLoginButton provider="kakao" fullWidth />
+          <OAuthLoginButton provider="google" fullWidth />
         </div>
       </div>
     </div>

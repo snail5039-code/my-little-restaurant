@@ -1,11 +1,16 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { Plus, X, MapPin, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Plus, X, MapPin, Loader2, Check } from "lucide-react";
 import { createRestaurant, type ActionState } from "@/app/restaurants/actions";
 import LoginRequiredModal from "./LoginRequiredModal";
 
 const GEOCODE_SCRIPT_ID = "kakao-maps-sdk-services";
+
+const FIELD_CLASS =
+  "w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand";
+const LABEL_CLASS =
+  "text-[11px] font-semibold uppercase tracking-wide text-muted";
 
 function loadGeocodeScript() {
   return new Promise<void>((resolve) => {
@@ -53,6 +58,28 @@ export default function RegisterRestaurantModal({
   const addressRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  const showForm = open && isLoggedIn;
+
+  useEffect(() => {
+    if (!showForm) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [showForm]);
+
+  const close = () => {
+    setOpen(false);
+    setState({});
+    setGeocodeMsg(null);
+  };
+
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
       const result = await createRestaurant({}, formData);
@@ -86,11 +113,11 @@ export default function RegisterRestaurantModal({
       setGeocoding(false);
       if (status === kakao.maps.services.Status.OK && result[0]) {
         setCoords({ lat: Number(result[0].y), lng: Number(result[0].x) });
-        setGeocodeMsg("좌표를 찾았어요. 지도에 표시됩니다.");
+        setGeocodeMsg("좌표를 찾았어요. 지도에 핀이 표시됩니다.");
       } else {
         setCoords(null);
         setGeocodeMsg(
-          "주소로 좌표를 찾지 못했어요. 등록은 되지만 지도엔 안 나와요."
+          "주소로 좌표를 못 찾았어요. 등록은 되지만 지도엔 안 나와요."
         );
       }
     });
@@ -100,48 +127,67 @@ export default function RegisterRestaurantModal({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-600"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-brand px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong"
       >
-        <Plus className="h-4 w-4" />
+        <Plus className="h-4 w-4" strokeWidth={2.4} />
         맛집 등록
       </button>
 
       <LoginRequiredModal
         open={open && !isLoggedIn}
-        onClose={() => setOpen(false)}
+        onClose={close}
         message="맛집을 등록하려면 로그인이 필요해요."
       />
 
-      {open && isLoggedIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 p-4 sm:items-center"
+          onClick={close}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-title"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="my-auto w-full max-w-md overflow-hidden rounded-xl border border-line bg-surface shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+              <h2
+                id="register-title"
+                className="text-[15px] font-bold text-foreground"
+              >
                 맛집 등록
               </h2>
               <button
-                onClick={() => setOpen(false)}
-                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                onClick={close}
+                aria-label="닫기"
+                className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form ref={formRef} action={handleSubmit} className="flex flex-col gap-3">
+            <form
+              ref={formRef}
+              action={handleSubmit}
+              className="flex flex-col gap-3.5 p-5"
+            >
               <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
               <input type="hidden" name="longitude" value={coords?.lng ?? ""} />
 
-              <label className="flex flex-col gap-1 text-sm">
-                가게 이름
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>가게 이름</span>
                 <input
                   name="name"
                   required
-                  className="rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-neutral-800"
+                  autoFocus
+                  placeholder="예: 할머니 손칼국수"
+                  className={FIELD_CLASS}
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm">
-                카테고리
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>카테고리</span>
                 <select
                   name="category_id"
                   required
@@ -153,7 +199,7 @@ export default function RegisterRestaurantModal({
                     ) as HTMLInputElement | null;
                     if (hidden) hidden.value = opt?.text ?? "";
                   }}
-                  className="rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-neutral-800"
+                  className={FIELD_CLASS}
                 >
                   <option value="">선택해주세요</option>
                   {categories.map((c) => (
@@ -165,76 +211,88 @@ export default function RegisterRestaurantModal({
                 <input type="hidden" name="category_name" />
               </label>
 
-              <label className="flex flex-col gap-1 text-sm">
-                주소
+              <div className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>주소</span>
                 <div className="flex gap-2">
                   <input
                     ref={addressRef}
                     name="address"
-                    className="min-w-0 flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-neutral-800"
-                    onChange={() => setCoords(null)}
+                    placeholder="예: 서울 중구 세종대로 110"
+                    onChange={() => {
+                      setCoords(null);
+                      setGeocodeMsg(null);
+                    }}
+                    className={FIELD_CLASS}
                   />
                   <button
                     type="button"
                     onClick={handleGeocode}
                     disabled={geocoding}
-                    className="flex shrink-0 items-center gap-1 rounded-lg border border-black/10 px-3 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-60 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2.5 py-2 text-xs font-semibold text-muted transition-colors hover:border-brand hover:text-brand disabled:opacity-60"
                   >
                     {geocoding ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : coords ? (
+                      <Check className="h-3.5 w-3.5 text-brand" />
                     ) : (
                       <MapPin className="h-3.5 w-3.5" />
                     )}
-                    좌표 찾기
+                    좌표
                   </button>
                 </div>
                 {geocodeMsg && (
-                  <span className="text-xs text-neutral-400">{geocodeMsg}</span>
+                  <span
+                    className={`text-[11px] leading-relaxed ${
+                      coords ? "text-brand" : "text-muted"
+                    }`}
+                  >
+                    {geocodeMsg}
+                  </span>
                 )}
-              </label>
+              </div>
 
-              <label className="flex flex-col gap-1 text-sm">
-                혼밥 난이도 (1~5)
-                <select
-                  name="alone_ok"
-                  defaultValue=""
-                  className="rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-neutral-800"
-                >
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>혼밥 난이도</span>
+                <select name="alone_ok" defaultValue="" className={FIELD_CLASS}>
                   <option value="">선택 안 함</option>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                  <option value="1">1 · 아주 편함</option>
+                  <option value="2">2 · 편함</option>
+                  <option value="3">3 · 보통</option>
+                  <option value="4">4 · 조금 부담</option>
+                  <option value="5">5 · 혼자는 힘듦</option>
                 </select>
               </label>
 
-              <label className="flex flex-col gap-1 text-sm">
-                메모
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL_CLASS}>메모</span>
                 <textarea
                   name="memo"
                   rows={2}
-                  placeholder="한 줄 메모를 남겨보세요"
-                  className="rounded-lg border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-neutral-800"
+                  placeholder="예: 웨이팅 15분, 1인석 있음"
+                  className={`${FIELD_CLASS} resize-none leading-relaxed`}
                 />
               </label>
 
-              {state.error && <p className="text-sm text-red-500">{state.error}</p>}
+              {state.error && (
+                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+                  {state.error}
+                </p>
+              )}
 
-              <div className="mt-2 flex justify-end gap-2">
+              <div className="mt-1 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-full px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  onClick={close}
+                  className="rounded-md px-3.5 py-2 text-[13px] font-semibold text-muted transition-colors hover:bg-surface-muted"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex items-center justify-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-strong disabled:opacity-60"
                 >
-                  {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   등록하기
                 </button>
               </div>

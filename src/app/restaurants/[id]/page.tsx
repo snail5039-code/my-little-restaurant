@@ -1,14 +1,17 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   UtensilsCrossed,
+  Coffee,
   CheckCircle2,
   Clock,
   Heart,
   UserRound,
-  Star,
+  ChevronLeft,
   MapPin,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import Rating from "@/components/Rating";
 
 export default async function RestaurantDetailPage({
   params,
@@ -17,162 +20,208 @@ export default async function RestaurantDetailPage({
 }) {
   const { id } = await params;
 
-  const [{ data: restaurant }, { data: menu }, { data: reviews }, { count: favoriteCount }] =
-    await Promise.all([
-      supabase
-        .from("restaurants")
-        .select("*, categories(name)")
-        .eq("id", id)
-        .single(),
-      supabase
-        .from("menu")
-        .select("*")
-        .eq("restaurant_id", id)
-        .order("is_representative", { ascending: false }),
-      supabase
-        .from("reviews")
-        .select("*")
-        .eq("restaurant_id", id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("favorites")
-        .select("*", { count: "exact", head: true })
-        .eq("restaurant_id", id),
-    ]);
+  const [
+    { data: restaurant },
+    { data: menu },
+    { data: reviews },
+    { count: favoriteCount },
+  ] = await Promise.all([
+    supabase
+      .from("restaurants")
+      .select("*, categories(name)")
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("menu")
+      .select("*")
+      .eq("restaurant_id", id)
+      .order("is_representative", { ascending: false }),
+    supabase
+      .from("reviews")
+      .select("*")
+      .eq("restaurant_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("favorites")
+      .select("*", { count: "exact", head: true })
+      .eq("restaurant_id", id),
+  ]);
 
   if (!restaurant) {
     notFound();
   }
 
-  const categoryName = (restaurant as { categories?: { name: string } | null })
-    .categories?.name;
+  const categoryName =
+    (restaurant as { categories?: { name: string } | null }).categories?.name ??
+    restaurant.food;
+  const CategoryIcon = categoryName === "카페" ? Coffee : UtensilsCrossed;
 
-  const chipClass =
-    "inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
+  const facts = [
+    {
+      label: "방문 여부",
+      icon: restaurant.visited ? CheckCircle2 : Clock,
+      iconClass: restaurant.visited ? "text-brand" : "text-muted",
+      value: restaurant.visited ? "다녀왔어요" : "아직 안 가봤어요",
+    },
+    {
+      label: "좋아요",
+      icon: Heart,
+      iconClass: "text-muted",
+      value: `${favoriteCount ?? 0}명`,
+    },
+    ...(restaurant.alone_ok !== null
+      ? [
+          {
+            label: "혼밥 난이도",
+            icon: UserRound,
+            iconClass: "text-muted",
+            value: `${restaurant.alone_ok} / 5`,
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-      <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-neutral-900">
-        <div className="flex h-48 items-center justify-center bg-gradient-to-br from-orange-200 to-red-300 text-orange-900 sm:h-64 dark:from-orange-900 dark:to-red-950 dark:text-orange-200">
-          <UtensilsCrossed className="h-16 w-16" strokeWidth={1.5} />
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+      <Link
+        href="/restaurants"
+        className="inline-flex w-fit items-center gap-1 text-[13px] text-muted transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        맛집 리스트
+      </Link>
+
+      {/* 헤더 */}
+      <header className="overflow-hidden rounded-lg border border-line bg-surface">
+        <div className="flex h-40 items-center justify-center border-b border-line bg-surface-muted sm:h-52">
+          <CategoryIcon className="h-12 w-12 text-muted" strokeWidth={1.2} />
         </div>
 
-        <div className="flex flex-col gap-4 p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl dark:text-neutral-50">
-                  {restaurant.name}
-                </h1>
-                {categoryName && (
-                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                    {categoryName}
-                  </span>
-                )}
-              </div>
-              {restaurant.address && (
-                <p className="mt-1.5 flex items-center gap-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  {restaurant.address}
-                </p>
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                {restaurant.name}
+              </h1>
+              {categoryName && (
+                <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-muted">
+                  {categoryName}
+                </span>
               )}
             </div>
+            {restaurant.address && (
+              <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-relaxed text-muted">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+                {restaurant.address}
+              </p>
+            )}
+            {restaurant.memo && (
+              <p className="mt-3 border-l-2 border-brand/40 pl-3 text-[13px] leading-relaxed text-muted">
+                {restaurant.memo}
+              </p>
+            )}
+          </div>
 
-            <div className="flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-3.5 py-2 text-white">
-              <Star className="h-5 w-5 fill-white" />
-              <div className="leading-tight">
-                <div className="text-lg font-bold">
-                  {restaurant.rating !== null ? restaurant.rating.toFixed(1) : "-"}
-                </div>
-                <div className="text-[10px] text-white/80">
-                  리뷰 {reviews?.length ?? 0}
-                </div>
-              </div>
+          {/* 평점 요약 */}
+          <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-line bg-surface-muted px-5 py-3">
+            <span className="tnum text-[28px] font-bold leading-none text-brand">
+              {restaurant.rating !== null ? restaurant.rating.toFixed(2) : "–"}
+            </span>
+            <Rating value={restaurant.rating} showNumber={false} size={12} />
+            <span className="tnum text-[11px] text-muted">
+              리뷰 {reviews?.length ?? 0}
+            </span>
+          </div>
+        </div>
+
+        {/* 기본 정보 */}
+        <dl className="grid grid-cols-1 divide-y divide-line border-t border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {facts.map((fact) => (
+            <div key={fact.label} className="flex flex-col gap-1 px-5 py-3.5">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {fact.label}
+              </dt>
+              <dd className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+                <fact.icon
+                  className={`h-3.5 w-3.5 ${fact.iconClass}`}
+                  strokeWidth={2}
+                />
+                {fact.value}
+              </dd>
             </div>
-          </div>
+          ))}
+        </dl>
+      </header>
 
-          <div className="flex flex-wrap gap-2 border-t border-black/5 pt-4 dark:border-white/10">
-            <span className={chipClass}>
-              {restaurant.visited ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> 방문 완료
-                </>
-              ) : (
-                <>
-                  <Clock className="h-3.5 w-3.5 text-neutral-400" /> 아직 안 가봄
-                </>
-              )}
-            </span>
-            <span className={chipClass}>
-              <Heart className="h-3.5 w-3.5 fill-red-400 text-red-400" /> 좋아요{" "}
-              {favoriteCount ?? 0}
-            </span>
-            {restaurant.alone_ok !== null && (
-              <span className={chipClass}>
-                <UserRound className="h-3.5 w-3.5 text-neutral-400" /> 혼밥 난이도{" "}
-                {restaurant.alone_ok}/5
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-neutral-900">
-          <h2 className="font-semibold text-neutral-900 dark:text-neutral-50">
-            리뷰 {reviews?.length ?? 0}
-          </h2>
-          <ul className="mt-3 flex flex-col gap-3">
-            {reviews && reviews.length > 0 ? (
-              reviews.map((review) => (
-                <li
-                  key={review.id}
-                  className="rounded-xl bg-neutral-50 p-3 text-sm dark:bg-neutral-800"
-                >
-                  {review.rating !== null && (
-                    <span className="mr-2 inline-flex items-center gap-1 text-orange-500">
-                      <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
-                      {review.rating.toFixed(1)}
-                    </span>
-                  )}
-                  {review.content}
-                </li>
-              ))
-            ) : (
-              <li className="text-sm text-neutral-400">아직 리뷰가 없어요.</li>
-            )}
-          </ul>
-        </div>
-
-        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-neutral-900">
-          <h2 className="font-semibold text-neutral-900 dark:text-neutral-50">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* 메뉴 */}
+        <section className="rounded-lg border border-line bg-surface">
+          <h2 className="border-b border-line px-5 py-3 text-sm font-bold text-foreground">
             메뉴
           </h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {menu && menu.length > 0 ? (
-              menu.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    {item.is_representative && (
-                      <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
+          {menu && menu.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {menu.map((item) => (
+                <li key={item.id} className="flex items-start gap-3 px-5 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+                      {item.name}
+                      {item.is_representative && (
+                        <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-bold text-brand">
+                          대표
+                        </span>
+                      )}
+                    </p>
+                    {item.description && (
+                      <p className="mt-0.5 text-xs text-muted">
+                        {item.description}
+                      </p>
                     )}
-                    {item.name}
-                  </span>
+                  </div>
                   {item.price !== null && (
-                    <span className="text-neutral-500 dark:text-neutral-400">
+                    <span className="tnum shrink-0 text-[13px] text-muted">
                       {item.price.toLocaleString()}원
                     </span>
                   )}
                 </li>
-              ))
-            ) : (
-              <li className="text-sm text-neutral-400">등록된 메뉴가 없어요.</li>
-            )}
-          </ul>
-        </div>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-8 text-center text-[13px] text-muted">
+              등록된 메뉴가 없어요.
+            </p>
+          )}
+        </section>
+
+        {/* 리뷰 */}
+        <section className="rounded-lg border border-line bg-surface">
+          <h2 className="flex items-baseline gap-1.5 border-b border-line px-5 py-3 text-sm font-bold text-foreground">
+            리뷰
+            <span className="tnum text-xs font-normal text-muted">
+              {reviews?.length ?? 0}
+            </span>
+          </h2>
+          {reviews && reviews.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {reviews.map((review) => (
+                <li key={review.id} className="px-5 py-3.5">
+                  {review.rating !== null && (
+                    <Rating value={review.rating} size={12} />
+                  )}
+                  {review.content && (
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-foreground">
+                      {review.content}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-8 text-center text-[13px] text-muted">
+              아직 리뷰가 없어요.
+            </p>
+          )}
+        </section>
       </div>
     </main>
   );

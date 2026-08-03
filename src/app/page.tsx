@@ -1,88 +1,105 @@
 import Link from "next/link";
-import { UtensilsCrossed, ClipboardList, MapPinned, Search } from "lucide-react";
+import { BookmarkPlus, NotebookPen, MapPinned, ArrowRight } from "lucide-react";
 import OAuthLoginButton from "@/components/OAuthLoginButton";
+import Rating from "@/components/Rating";
 
 const STEPS = [
-  { title: "맛집 등록", desc: "가고 싶은 식당을 저장해두세요.", icon: ClipboardList },
-  { title: "체크 & 메모", desc: "다녀온 곳은 체크하고 별점·메모를 남겨요.", icon: Search },
-  { title: "지도로 확인", desc: "저장한 맛집을 지도에서 한눈에 봐요.", icon: MapPinned },
+  {
+    icon: BookmarkPlus,
+    title: "저장",
+    desc: "가고 싶은 가게를 주소만 넣어 저장해두세요. 좌표는 자동으로 찾아둡니다.",
+  },
+  {
+    icon: NotebookPen,
+    title: "기록",
+    desc: "다녀온 곳은 방문 체크. 별점과 한 줄 메모로 그날의 기억을 남겨요.",
+  },
+  {
+    icon: MapPinned,
+    title: "지도",
+    desc: "저장한 가게가 지도 위에 핀으로 모입니다. 근처에 뭐가 있는지 한눈에.",
+  },
 ];
-
-const CATEGORIES = ["한식", "중식", "일식", "양식", "카페", "분식"];
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-medium text-neutral-400">
-          나만의 맛집 도장깨기
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-10 md:px-8 md:py-16">
+      {/* 히어로 */}
+      <section className="max-w-2xl">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold tracking-wide text-brand">
+          맛집 도장깨기
         </span>
-        <div className="flex flex-wrap gap-2">
-          <OAuthLoginButton
-            provider="kakao"
-            className="rounded-full bg-[#FEE500] px-5 py-2 text-sm font-semibold text-black/85 shadow-sm transition-colors hover:brightness-95"
-          >
-            카카오로 시작하기
-          </OAuthLoginButton>
-          <OAuthLoginButton
-            provider="google"
-            className="rounded-full border border-black/10 bg-white px-5 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-200"
-          >
-            구글로 시작하기
-          </OAuthLoginButton>
-        </div>
-      </header>
 
-      <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-        <section className="flex flex-col justify-center gap-6 rounded-2xl bg-white p-6 shadow-sm sm:p-10 dark:bg-neutral-900">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-300 to-red-400 text-white sm:h-24 sm:w-24">
-            <UtensilsCrossed className="h-10 w-10 sm:h-12 sm:w-12" strokeWidth={1.5} />
+        <h1 className="mt-5 text-[30px] font-bold leading-[1.25] tracking-tight text-foreground sm:text-[42px] sm:leading-[1.2]">
+          혼밥도, 같이도 좋았던 가게를
+          <br />
+          <span className="text-brand">나만의 목록</span>으로 남겨두세요.
+        </h1>
+
+        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
+          저장해둔 가게에 다녀오면 체크하고 별점과 메모를 남깁니다. 남이 만든
+          랭킹이 아니라, 내가 직접 채워가는 맛집 기록장.
+        </p>
+
+        <div className="mt-7 flex flex-wrap items-center gap-2.5">
+          <OAuthLoginButton provider="kakao" />
+          <OAuthLoginButton provider="google" />
+        </div>
+
+        <Link
+          href="/restaurants"
+          className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline"
+        >
+          먼저 둘러보기
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+
+      {/* 카드 미리보기 — 실제 리스트가 어떻게 보이는지 */}
+      <section className="mt-14 rounded-lg border border-line bg-surface p-4 sm:p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+          리스트 미리보기
+        </p>
+        <div className="mt-3 flex gap-3.5">
+          <div className="flex h-[86px] w-[86px] shrink-0 items-center justify-center rounded-md border border-line bg-surface-muted">
+            <MapPinned className="h-7 w-7 text-muted" strokeWidth={1.4} />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
-              나만의 작은 맛집
-            </h1>
-            <p className="mt-3 max-w-md text-neutral-600 dark:text-neutral-400">
-              혼밥 또는 친구들과 먹기 좋은 식당들을 저장하고, 다녀온 곳은
-              체크하면서 별점과 메모를 남겨보세요. 나만의 맛집 지도를 만드는
-              가장 쉬운 방법.
+          <div className="flex min-w-0 flex-col justify-center">
+            <p className="truncate text-[15px] font-bold text-foreground">
+              할머니 손칼국수
+            </p>
+            <div className="mt-1">
+              <Rating value={4.2} reviewCount={3} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              한식 <span className="text-line">·</span> 혼밥 2/5
+            </p>
+            <p className="mt-1.5 truncate text-xs text-muted">
+              웨이팅 15분, 1인석 있어서 혼밥 편했음
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => (
-              <span
-                key={c}
-                className="rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600 dark:bg-orange-900/30 dark:text-orange-300"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="flex flex-col gap-5 rounded-2xl bg-orange-500 p-6 text-white shadow-sm sm:p-8">
-          <h2 className="text-xl font-bold">시작하기</h2>
-          <ol className="flex flex-1 flex-col gap-4">
-            {STEPS.map((step) => (
-              <li key={step.title} className="flex gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15">
-                  <step.icon className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="font-semibold">{step.title}</p>
-                  <p className="text-sm text-white/80">{step.desc}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <Link
-            href="/restaurants"
-            className="rounded-full bg-white px-5 py-2 text-center text-sm font-semibold text-orange-600 transition-colors hover:bg-orange-50"
-          >
-            맛집 둘러보기
-          </Link>
-        </section>
-      </div>
+      {/* 사용 흐름 — 카드 3장 대신 구분선으로 나눈 한 덩어리 */}
+      <section className="mt-10 grid grid-cols-1 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {STEPS.map((step, i) => (
+          <div key={step.title} className="flex flex-col gap-2 p-5">
+            <div className="flex items-center gap-2">
+              <step.icon className="h-4 w-4 text-brand" strokeWidth={2} />
+              <span className="tnum text-[11px] font-bold text-muted">
+                0{i + 1}
+              </span>
+            </div>
+            <h2 className="text-[15px] font-bold text-foreground">
+              {step.title}
+            </h2>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {step.desc}
+            </p>
+          </div>
+        ))}
+      </section>
     </main>
   );
 }
