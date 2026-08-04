@@ -101,7 +101,8 @@ export default function KakaoMap({
 
       markers.forEach((marker) => {
         const position = new kakao.maps.LatLng(marker.lat, marker.lng);
-        const kakaoMarker = new kakao.maps.Marker({ position, map });
+        // 모범업소 마커(zIndex 1)와 겹칠 때 내 맛집 마커가 가려지지 않도록 위에 그린다
+        const kakaoMarker = new kakao.maps.Marker({ position, map, zIndex: 3 });
 
         // 일정한 비율로 보이도록 고정 폭 카드 형태로 구성한다.
         const content = document.createElement("div");
@@ -170,6 +171,7 @@ export default function KakaoMap({
           position,
           map,
           image: markerImage,
+          zIndex: 1,
         });
 
         // 등록 버튼은 실제 클릭 핸들러가 필요해서 문자열 대신 DOM 엘리먼트로

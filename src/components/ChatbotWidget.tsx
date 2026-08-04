@@ -56,53 +56,60 @@ export function ChatbotWidget() {
     }
   };
 
-  // 마우스 다운: 드래그 시작 (문서 리스너를 즉시 동기적으로 등록해 경쟁 상태 방지)
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  // 드래그 진행 중 좌표를 ref로도 들고 있어 pointermove 핸들러가 최신 값을
+  // state 리렌더링 없이 바로 읽을 수 있게 한다 (모바일 터치에서도 끊김 없이 동작)
+  const dragStateRef = useRef({ startX: 0, startY: 0, lastX: 0, lastY: 0, currentX: 0, currentY: 0 });
+
+  // Pointer Events로 마우스/터치를 함께 처리 (마우스 전용 mousedown/mousemove로는
+  // 모바일 터치 드래그가 전혀 동작하지 않아서 교체함)
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isOpen) return; // 채팅창이 열려있으면 드래그 불가
 
+    e.currentTarget.setPointerCapture(e.pointerId);
     wasDraggedRef.current = false;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    let lastX = startX;
-    let lastY = startY;
-    let currentX = characterX;
-    let currentY = characterY;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const movedX = Math.abs(moveEvent.clientX - startX);
-      const movedY = Math.abs(moveEvent.clientY - startY);
-
-      if (!wasDraggedRef.current && (movedX > 3 || movedY > 3)) {
-        wasDraggedRef.current = true;
-        setIsDragging(true);
-      }
-
-      if (!wasDraggedRef.current) return;
-
-      const deltaX = moveEvent.clientX - lastX;
-      const deltaY = moveEvent.clientY - lastY;
-
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-
-      currentX = Math.max(0, Math.min(100, currentX + (deltaX / windowWidth) * 100));
-      currentY = Math.max(0, Math.min(100, currentY + (deltaY / windowHeight) * 100));
-
-      setCharacterX(currentX);
-      setCharacterY(currentY);
-
-      lastX = moveEvent.clientX;
-      lastY = moveEvent.clientY;
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      currentX: characterX,
+      currentY: characterY,
     };
+  };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      setIsDragging(false);
-    };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragStateRef.current;
+    const movedX = Math.abs(e.clientX - drag.startX);
+    const movedY = Math.abs(e.clientY - drag.startY);
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    if (!wasDraggedRef.current && (movedX > 3 || movedY > 3)) {
+      wasDraggedRef.current = true;
+      setIsDragging(true);
+    }
+
+    if (!wasDraggedRef.current) return;
+
+    const deltaX = e.clientX - drag.lastX;
+    const deltaY = e.clientY - drag.lastY;
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    drag.currentX = Math.max(0, Math.min(100, drag.currentX + (deltaX / windowWidth) * 100));
+    drag.currentY = Math.max(0, Math.min(100, drag.currentY + (deltaY / windowHeight) * 100));
+
+    setCharacterX(drag.currentX);
+    setCharacterY(drag.currentY);
+
+    drag.lastX = e.clientX;
+    drag.lastY = e.clientY;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   };
 
   if (!mounted) return null;
@@ -120,8 +127,12 @@ export function ChatbotWidget() {
           top: `${characterY}%`,
           transform: 'translate(-50%, -50%)',
           userSelect: 'none',
+          touchAction: 'none',
         }}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <ChatbotCharacter
           clickCount={characterClickCount}

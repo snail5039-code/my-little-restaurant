@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Map as MapIcon, LayoutGrid, Search, SearchX } from "lucide-react";
+import { Map as MapIcon, LayoutGrid, Search, SearchX, ChevronLeft, ChevronRight } from "lucide-react";
 import RestaurantCard, { type RestaurantCardData } from "./RestaurantCard";
 import KakaoMap, { type CertifiedMapMarker } from "./KakaoMap";
 import RegisterRestaurantModal, {
@@ -12,11 +12,20 @@ import AIRecommendModal from "./AIRecommendModal";
 import NearbyModelRestaurantSearch from "./NearbyModelRestaurantSearch";
 
 type View = "card" | "map";
+type MapFilter = "both" | "mine" | "certified";
 
 const VIEW_OPTIONS = [
   { key: "card", label: "카드", icon: LayoutGrid },
   { key: "map", label: "지도", icon: MapIcon },
 ] as const;
+
+const MAP_FILTER_OPTIONS = [
+  { key: "both", label: "전체" },
+  { key: "mine", label: "내 맛집만" },
+  { key: "certified", label: "모범업소만" },
+] as const;
+
+const PAGE_SIZE = 12;
 
 export default function RestaurantsView({
   restaurants,
@@ -32,6 +41,8 @@ export default function RestaurantsView({
   const [view, setView] = useState<View>("card");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [mapFilter, setMapFilter] = useState<MapFilter>("both");
+  const [page, setPage] = useState(1);
   const [certifiedMarkers, setCertifiedMarkers] = useState<CertifiedMapMarker[]>(
     []
   );
@@ -48,6 +59,21 @@ export default function RestaurantsView({
       return matchesQuery && matchesCategory;
     });
   }, [restaurants, query, activeCategory]);
+
+  // 검색어/카테고리가 바뀌면 이전 페이지에 머물러 있지 않도록 1페이지로 리셋.
+  // useEffect 대신 렌더 중 파생 상태로 처리 (React가 권장하는 패턴).
+  const filterKey = `${query}|${activeCategory ?? ""}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page]
+  );
 
   const markers = useMemo(
     () =>
@@ -165,17 +191,54 @@ export default function RestaurantsView({
 
       {view === "card" ? (
         filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-            {filtered.map((restaurant) => (
-              <RestaurantCard
-                key={restaurant.id}
-                {...restaurant}
-                isOwner={!!currentUserId && restaurant.ownerId === currentUserId}
-                isLoggedIn={isLoggedIn}
-                categories={categories}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              {paginated.map((restaurant) => (
+                <RestaurantCard
+                  key={restaurant.id}
+                  {...restaurant}
+                  isOwner={!!currentUserId && restaurant.ownerId === currentUserId}
+                  isLoggedIn={isLoggedIn}
+                  categories={categories}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 pt-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  aria-label="이전 페이지"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    aria-current={p === page}
+                    className={`tnum inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors ${
+                      p === page
+                        ? "bg-brand text-white"
+                        : "text-muted hover:bg-surface-muted hover:text-foreground"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  aria-label="다음 페이지"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line py-20 text-center">
             <SearchX className="h-6 w-6 text-muted" strokeWidth={1.6} />
@@ -194,10 +257,28 @@ export default function RestaurantsView({
       ) : (
         <div className="flex flex-col gap-2">
           <NearbyModelRestaurantSearch onResults={setCertifiedMarkers} />
+
+          {/* 지도에 무엇을 표시할지: 내 맛집/모범업소가 겹쳐서 안 보이는 문제 때문에 필터 추가 */}
+          <div className="flex gap-1.5">
+            {MAP_FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                onClick={() => setMapFilter(option.key)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  mapFilter === option.key
+                    ? "border-brand bg-brand text-white"
+                    : "border-line bg-surface text-muted hover:text-foreground"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
           <div className="overflow-hidden rounded-lg border border-line">
             <KakaoMap
-              markers={markers}
-              certifiedMarkers={certifiedMarkers}
+              markers={mapFilter === "certified" ? [] : markers}
+              certifiedMarkers={mapFilter === "mine" ? [] : certifiedMarkers}
               onRegisterCertified={(marker) =>
                 registerModalRef.current?.openWithPrefill({
                   name: marker.name,

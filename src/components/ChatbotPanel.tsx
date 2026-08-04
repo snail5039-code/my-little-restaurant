@@ -129,57 +129,65 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
     }
   };
 
-  // 리사이즈 핸들 드래그: 문서 리스너를 mousedown 안에서 바로(동기적으로) 등록해
-  // useEffect 커밋을 기다리다 첫 mousemove/mouseup을 놓치는 경쟁 상태를 피한다
-  const handleResizeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!panelRef.current) return;
+  // 리사이즈 핸들 드래그: Pointer Events로 마우스/터치를 함께 처리한다.
+  // setPointerCapture로 포인터를 캡처해두면 손가락/마우스가 핸들 밖으로 나가도
+  // 계속 이 엘리먼트로 move/up 이벤트가 오므로 document 리스너가 필요 없다.
+  // isResizing(React state) 갱신을 기다리지 않도록 ref로 동기 판단한다.
+  const resizingRef = useRef(false);
+
+  const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    resizingRef.current = true;
     setIsResizing(true);
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!panelRef.current) return;
-      const rect = panelRef.current.getBoundingClientRect();
-      const newHeight = rect.bottom - moveEvent.clientY;
-      if (newHeight > 300 && newHeight < 800) {
-        setHeight(newHeight);
-      }
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      setIsResizing(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // 헤더 드래그로 채팅창 이동 (같은 이유로 리스너를 mousedown 안에서 바로 등록)
-  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizingRef.current || !panelRef.current) return;
+    const rect = panelRef.current.getBoundingClientRect();
+    const newHeight = rect.bottom - e.clientY;
+    if (newHeight > 300 && newHeight < 800) {
+      setHeight(newHeight);
+    }
+  };
+
+  const endResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizingRef.current) return;
+    resizingRef.current = false;
+    setIsResizing(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  // 헤더 드래그로 채팅창 이동 (같은 이유로 Pointer Events + capture 사용)
+  const draggingPanelRef = useRef(false);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
+
+  const handleHeaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     // 버튼 클릭은 드래그로 취급하지 않음
     if ((e.target as HTMLElement).closest('button')) return;
 
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingPanelRef.current = true;
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
     setIsDraggingPanel(true);
-    let lastX = e.clientX;
-    let lastY = e.clientY;
+  };
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - lastX;
-      const deltaY = moveEvent.clientY - lastY;
-      setDragOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-      lastX = moveEvent.clientX;
-      lastY = moveEvent.clientY;
-    };
+  const handleHeaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingPanelRef.current) return;
+    const deltaX = e.clientX - lastPointerRef.current.x;
+    const deltaY = e.clientY - lastPointerRef.current.y;
+    setDragOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+    lastPointerRef.current = { x: e.clientX, y: e.clientY };
+  };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      setIsDraggingPanel(false);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+  const endHeaderDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingPanelRef.current) return;
+    draggingPanelRef.current = false;
+    setIsDraggingPanel(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   };
 
   if (!isOpen) return null;
@@ -209,11 +217,14 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
     >
       {/* Header */}
       <div
-        onMouseDown={handleHeaderMouseDown}
+        onPointerDown={handleHeaderPointerDown}
+        onPointerMove={handleHeaderPointerMove}
+        onPointerUp={endHeaderDrag}
+        onPointerCancel={endHeaderDrag}
         className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0 select-none ${
           isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        style={{ userSelect: 'none' }}
+        style={{ userSelect: 'none', touchAction: 'none' }}
       >
         <div className="flex items-center gap-2">
           <MessageCircle size={20} className="text-blue-600" />
@@ -299,10 +310,14 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
         <div className="text-xs text-gray-500 text-center">아래를 드래그해서 크기 조절</div>
       </div>
 
-      {/* Resize Handle: 실제 클릭 영역은 넉넉하게, 보이는 바는 얇게 */}
+      {/* Resize Handle: 실제 클릭/터치 영역은 넉넉하게, 보이는 바는 얇게 */}
       <div
-        onMouseDown={handleResizeMouseDown}
-        className="flex h-3 flex-shrink-0 cursor-ns-resize items-center justify-center"
+        onPointerDown={handleResizePointerDown}
+        onPointerMove={handleResizePointerMove}
+        onPointerUp={endResize}
+        onPointerCancel={endResize}
+        className="flex h-4 flex-shrink-0 cursor-ns-resize items-center justify-center"
+        style={{ touchAction: 'none' }}
       >
         <div
           className={`h-1 w-10 rounded-full bg-gray-300 transition-colors ${
