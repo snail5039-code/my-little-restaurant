@@ -10,6 +10,55 @@ interface ChatbotPanelProps {
   characterY: number;
 }
 
+// **굵게** 표시만 인라인으로 처리 (그 외 마크다운 기호는 그대로 노출하지 않고 텍스트로만 취급)
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(\*\*.+?\*\*)/g).filter((part) => part.length > 0);
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i} className="font-semibold">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
+// 줄바꿈 단위로 문단을 나눠서 렌더링 (빈 줄은 여백, #헤더/구분선은 별도 스타일로 처리)
+function FormattedMessage({ content }: { content: string }) {
+  const lines = content.split('\n');
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+
+        if (trimmed === '') {
+          return <div key={i} className="h-1" />;
+        }
+
+        if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
+          return <hr key={i} className="my-1.5 border-gray-200" />;
+        }
+
+        const headerMatch = trimmed.match(/^#{1,6}\s+(.*)$/);
+        if (headerMatch) {
+          return (
+            <p key={i} className="font-bold leading-relaxed">
+              {renderInlineMarkdown(headerMatch[1])}
+            </p>
+          );
+        }
+
+        return (
+          <p key={i} className="leading-relaxed">
+            {renderInlineMarkdown(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
   const {
     isOpen,
@@ -211,13 +260,17 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
           messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                className={`max-w-[85%] px-3 py-2 rounded-lg text-sm break-words ${
                   msg.role === 'user'
                     ? 'bg-blue-600 text-white rounded-br-none'
                     : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                 }`}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <FormattedMessage content={msg.content} />
+                ) : (
+                  msg.content
+                )}
               </div>
             </div>
           ))

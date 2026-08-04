@@ -1,5 +1,7 @@
 "use server";
 
+import { extractDistrict } from "./address";
+
 // 행정안전부_모범음식점정보 조회서비스 (data.go.kr, 15155052)
 // Base URL: apis.data.go.kr/1741000/excellent_restaurant_info
 // 제공 필드: 업소명/주소/전화번호/음식유형/지정일자 등 — 메뉴 정보는 제공하지 않음.
@@ -22,16 +24,6 @@ export type ModelRestaurantMatch = {
   designatedAt: string;
   foodType: string;
 };
-
-function extractDistrict(address: string): string | null {
-  // "구/군"(자치구 단위)이 있으면 우선 사용하고, 세종/제주처럼 없는 경우에만 "시" 단위로 대체
-  const tokens = address.trim().split(/\s+/);
-  return (
-    tokens.find((part) => part.length > 1 && /(구|군)$/.test(part)) ??
-    tokens.find((part) => part.length > 1 && /시$/.test(part)) ??
-    null
-  );
-}
 
 export async function checkModelRestaurant(
   name: string,
