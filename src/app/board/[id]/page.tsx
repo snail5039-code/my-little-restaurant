@@ -82,13 +82,15 @@ export default async function PostDetailPage({
             </p>
           </div>
           <div className="flex shrink-0 items-center">
-            {canEdit && (
+            {canEdit && user && (
               <EditPostModal
                 postId={post.id}
+                userId={user.id}
                 isAdmin={isAdmin}
                 category={category}
                 title={post.title}
                 content={post.content}
+                imageUrls={post.image_urls ?? []}
               />
             )}
             {canDelete && <DeletePostButton postId={post.id} />}

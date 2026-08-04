@@ -75,6 +75,10 @@ export async function updatePost(
   const category = String(formData.get("category") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const imageUrls = formData
+    .getAll("image_urls")
+    .map((url) => String(url))
+    .filter(Boolean);
 
   if (!postId) {
     return { error: "잘못된 요청이에요." };
@@ -91,7 +95,12 @@ export async function updatePost(
 
   const { error } = await supabase
     .from("posts")
-    .update({ category, title, content })
+    .update({
+      category,
+      title,
+      content,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
+    })
     .eq("id", postId)
     .eq("user_id", user.id);
 
