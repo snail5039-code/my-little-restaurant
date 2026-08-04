@@ -91,7 +91,7 @@ export default async function Home() {
       {/* 히어로 */}
       <section className="max-w-2xl">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold tracking-wide text-brand">
-          맛집 도장깨기
+          나만의 작은 맛집
         </span>
 
         <h1 className="mt-5 text-[30px] font-bold leading-[1.25] tracking-tight text-foreground sm:text-[42px] sm:leading-[1.2]">

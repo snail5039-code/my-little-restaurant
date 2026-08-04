@@ -2,30 +2,30 @@
 
 /*
   디자인 토큰. 색을 컴포넌트마다 하드코딩하지 않고 여기서 한 번만 정의한다.
-  brand 는 타베로그 계열의 붉은 주황(기본 orange-500 보다 채도를 낮추고 붉게).
+  brand 는 대한민국 구석구석 맛집차트 참고 — 따뜻한 앰버/골드 톤.
 */
 :root {
-  --background: #f4f2ef;
+  --background: #fdf6e8;
   --surface: #ffffff;
-  --surface-muted: #faf9f7;
-  --foreground: #1c1917;
-  --muted: #78716c;
-  --line: #e4e1dc;
-  --brand: #d24d17;
-  --brand-strong: #a93a0f;
+  --surface-muted: #fdf1da;
+  --foreground: #2b2114;
+  --muted: #8a7856;
+  --line: #f0dfb8;
+  --brand: #e8960f;
+  --brand-strong: #c67c05;
   --star: #f0a020;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #14120f;
-    --surface: #1e1b18;
-    --surface-muted: #26221e;
-    --foreground: #f5f3f0;
-    --muted: #a8a29e;
-    --line: #322d28;
-    --brand: #f2703a;
-    --brand-strong: #ff8b58;
+    --background: #1a150c;
+    --surface: #241d12;
+    --surface-muted: #2c2415;
+    --foreground: #f7efdd;
+    --muted: #b8a67e;
+    --line: #3a2f1c;
+    --brand: #f2a83a;
+    --brand-strong: #ffbe5c;
     --star: #f5b53f;
   }
 }
