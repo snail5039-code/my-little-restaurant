@@ -10,6 +10,7 @@ import RegisterRestaurantModal, {
 import RecommendModal from "./RecommendModal";
 import AIRecommendModal from "./AIRecommendModal";
 import NearbyModelRestaurantSearch from "./NearbyModelRestaurantSearch";
+import { extractDistrict } from "@/lib/address";
 
 type View = "card" | "map";
 type MapFilter = "both" | "mine" | "certified";
@@ -41,6 +42,7 @@ export default function RestaurantsView({
   const [view, setView] = useState<View>("card");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeDistrict, setActiveDistrict] = useState<string | null>(null);
   const [mapFilter, setMapFilter] = useState<MapFilter>("both");
   const [page, setPage] = useState(1);
   const [certifiedMarkers, setCertifiedMarkers] = useState<CertifiedMapMarker[]>(
@@ -56,13 +58,15 @@ export default function RestaurantsView({
         r.name.toLowerCase().includes(q) ||
         (r.address ?? "").toLowerCase().includes(q);
       const matchesCategory = !activeCategory || r.category === activeCategory;
-      return matchesQuery && matchesCategory;
+      const matchesDistrict =
+        !activeDistrict || extractDistrict(r.address ?? "") === activeDistrict;
+      return matchesQuery && matchesCategory && matchesDistrict;
     });
-  }, [restaurants, query, activeCategory]);
+  }, [restaurants, query, activeCategory, activeDistrict]);
 
-  // 검색어/카테고리가 바뀌면 이전 페이지에 머물러 있지 않도록 1페이지로 리셋.
+  // 검색어/카테고리/지역이 바뀌면 이전 페이지에 머물러 있지 않도록 1페이지로 리셋.
   // useEffect 대신 렌더 중 파생 상태로 처리 (React가 권장하는 패턴).
-  const filterKey = `${query}|${activeCategory ?? ""}`;
+  const filterKey = `${query}|${activeCategory ?? ""}|${activeDistrict ?? ""}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
@@ -95,6 +99,19 @@ export default function RestaurantsView({
     const names = new Set(restaurants.map((r) => r.category).filter(Boolean));
     return categories.filter((c) => names.has(c.name));
   }, [restaurants, categories]);
+
+  // 주소에서 구/군/시를 뽑아 실제로 등록된 지역만 필터로 노출 (가게 수 많은 순)
+  const usedDistricts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of restaurants) {
+      const district = extractDistrict(r.address ?? "");
+      if (!district) continue;
+      counts.set(district, (counts.get(district) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+  }, [restaurants]);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -153,6 +170,35 @@ export default function RestaurantsView({
               }`}
             >
               {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 지역 칩 */}
+      {usedDistricts.length > 0 && (
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+          <button
+            onClick={() => setActiveDistrict(null)}
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              activeDistrict === null
+                ? "border-brand bg-brand text-white"
+                : "border-line bg-surface text-muted hover:text-foreground"
+            }`}
+          >
+            전지역
+          </button>
+          {usedDistricts.map((district) => (
+            <button
+              key={district}
+              onClick={() => setActiveDistrict(district)}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                activeDistrict === district
+                  ? "border-brand bg-brand text-white"
+                  : "border-line bg-surface text-muted hover:text-foreground"
+              }`}
+            >
+              {district}
             </button>
           ))}
         </div>

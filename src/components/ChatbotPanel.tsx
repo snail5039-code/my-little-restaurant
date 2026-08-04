@@ -72,8 +72,6 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
   } = useChatbotStore();
 
   const [input, setInput] = useState('');
-  const [height, setHeight] = useState(500); // 초기 높이 (px)
-  const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDraggingPanel, setIsDraggingPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -129,37 +127,7 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
     }
   };
 
-  // 리사이즈 핸들 드래그: Pointer Events로 마우스/터치를 함께 처리한다.
-  // setPointerCapture로 포인터를 캡처해두면 손가락/마우스가 핸들 밖으로 나가도
-  // 계속 이 엘리먼트로 move/up 이벤트가 오므로 document 리스너가 필요 없다.
-  // isResizing(React state) 갱신을 기다리지 않도록 ref로 동기 판단한다.
-  const resizingRef = useRef(false);
-
-  const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    resizingRef.current = true;
-    setIsResizing(true);
-  };
-
-  const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizingRef.current || !panelRef.current) return;
-    const rect = panelRef.current.getBoundingClientRect();
-    const newHeight = rect.bottom - e.clientY;
-    if (newHeight > 300 && newHeight < 800) {
-      setHeight(newHeight);
-    }
-  };
-
-  const endResize = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizingRef.current) return;
-    resizingRef.current = false;
-    setIsResizing(false);
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-  };
-
-  // 헤더 드래그로 채팅창 이동 (같은 이유로 Pointer Events + capture 사용)
+  // 헤더 드래그로 채팅창 이동 (Pointer Events + capture로 마우스/터치 함께 처리)
   const draggingPanelRef = useRef(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
 
@@ -206,8 +174,7 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
       className="fixed bg-white rounded-lg shadow-2xl flex flex-col z-40 border border-gray-200"
       style={{
         width: `${panelWidth}px`,
-        height: `${Math.min(height, window.innerHeight * 0.8)}px`,
-        maxHeight: '80vh',
+        height: 'min(560px, 75vh)',
         bottom: '120px',
         left: panelLeft || 'auto',
         right: panelRight,
@@ -307,23 +274,6 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
             <Send size={16} />
           </button>
         </div>
-        <div className="text-xs text-gray-500 text-center">아래를 드래그해서 크기 조절</div>
-      </div>
-
-      {/* Resize Handle: 실제 클릭/터치 영역은 넉넉하게, 보이는 바는 얇게 */}
-      <div
-        onPointerDown={handleResizePointerDown}
-        onPointerMove={handleResizePointerMove}
-        onPointerUp={endResize}
-        onPointerCancel={endResize}
-        className="flex h-4 flex-shrink-0 cursor-ns-resize items-center justify-center"
-        style={{ touchAction: 'none' }}
-      >
-        <div
-          className={`h-1 w-10 rounded-full bg-gray-300 transition-colors ${
-            isResizing ? 'bg-blue-500' : ''
-          }`}
-        />
       </div>
     </div>
   );
