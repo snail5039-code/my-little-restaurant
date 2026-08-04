@@ -8,6 +8,7 @@ import RegisterRestaurantModal, {
   type RegisterRestaurantModalHandle,
 } from "./RegisterRestaurantModal";
 import RecommendModal from "./RecommendModal";
+import AIRecommendModal from "./AIRecommendModal";
 import NearbyModelRestaurantSearch from "./NearbyModelRestaurantSearch";
 
 type View = "card" | "map";
@@ -83,6 +84,12 @@ export default function RestaurantsView({
           />
         </div>
         <RecommendModal
+          restaurants={restaurants}
+          categories={categories}
+          currentUserId={currentUserId}
+          isLoggedIn={isLoggedIn}
+        />
+        <AIRecommendModal
           restaurants={restaurants}
           categories={categories}
           currentUserId={currentUserId}
