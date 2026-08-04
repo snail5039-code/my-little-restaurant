@@ -76,7 +76,6 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDraggingPanel, setIsDraggingPanel] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -130,70 +129,58 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
     }
   };
 
-  const handleMouseDown = () => {
+  // 리사이즈 핸들 드래그: 문서 리스너를 mousedown 안에서 바로(동기적으로) 등록해
+  // useEffect 커밋을 기다리다 첫 mousemove/mouseup을 놓치는 경쟁 상태를 피한다
+  const handleResizeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!panelRef.current) return;
     setIsResizing(true);
-  };
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing || !panelRef.current) return;
-
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!panelRef.current) return;
       const rect = panelRef.current.getBoundingClientRect();
-      const newHeight = rect.bottom - e.clientY;
-
+      const newHeight = rect.bottom - moveEvent.clientY;
       if (newHeight > 300 && newHeight < 800) {
         setHeight(newHeight);
       }
     };
 
     const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
       setIsResizing(false);
     };
 
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
-
-  // 헤더 드래그로 채팅창 이동
+  // 헤더 드래그로 채팅창 이동 (같은 이유로 리스너를 mousedown 안에서 바로 등록)
   const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // 버튼 클릭은 드래그로 취급하지 않음
     if ((e.target as HTMLElement).closest('button')) return;
+
     setIsDraggingPanel(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-  };
+    let lastX = e.clientX;
+    let lastY = e.clientY;
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingPanel) return;
-
-      const deltaX = e.clientX - dragStartRef.current.x;
-      const deltaY = e.clientY - dragStartRef.current.y;
-
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - lastX;
+      const deltaY = moveEvent.clientY - lastY;
       setDragOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
+      lastX = moveEvent.clientX;
+      lastY = moveEvent.clientY;
     };
 
     const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
       setIsDraggingPanel(false);
     };
 
-    if (isDraggingPanel) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDraggingPanel]);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   if (!isOpen) return null;
 
@@ -312,13 +299,17 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
         <div className="text-xs text-gray-500 text-center">아래를 드래그해서 크기 조절</div>
       </div>
 
-      {/* Resize Handle */}
+      {/* Resize Handle: 실제 클릭 영역은 넉넉하게, 보이는 바는 얇게 */}
       <div
-        onMouseDown={handleMouseDown}
-        className={`h-1 bg-gray-300 cursor-ns-resize hover:bg-blue-500 transition-colors flex-shrink-0 ${
-          isResizing ? 'bg-blue-500' : ''
-        }`}
-      />
+        onMouseDown={handleResizeMouseDown}
+        className="flex h-3 flex-shrink-0 cursor-ns-resize items-center justify-center"
+      >
+        <div
+          className={`h-1 w-10 rounded-full bg-gray-300 transition-colors ${
+            isResizing ? 'bg-blue-500' : ''
+          }`}
+        />
+      </div>
     </div>
   );
 }
