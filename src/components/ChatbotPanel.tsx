@@ -25,6 +25,9 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
   const [input, setInput] = useState('');
   const [height, setHeight] = useState(500); // 초기 높이 (px)
   const [isResizing, setIsResizing] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingPanel, setIsDraggingPanel] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -109,6 +112,40 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
     };
   }, [isResizing]);
 
+  // 헤더 드래그로 채팅창 이동
+  const handleHeaderMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // 버튼 클릭은 드래그로 취급하지 않음
+    if ((e.target as HTMLElement).closest('button')) return;
+    setIsDraggingPanel(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingPanel) return;
+
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaY = e.clientY - dragStartRef.current.y;
+
+      setDragOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+      dragStartRef.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingPanel(false);
+    };
+
+    if (isDraggingPanel) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingPanel]);
+
   if (!isOpen) return null;
 
   // 캐릭터 위치를 기반으로 패널 위치 계산
@@ -130,11 +167,18 @@ export function ChatbotPanel({ characterX, characterY }: ChatbotPanelProps) {
         bottom: '120px',
         left: panelLeft || 'auto',
         right: panelRight,
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
         pointerEvents: 'auto',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+      <div
+        onMouseDown={handleHeaderMouseDown}
+        className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0 select-none ${
+          isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+        style={{ userSelect: 'none' }}
+      >
         <div className="flex items-center gap-2">
           <MessageCircle size={20} className="text-blue-600" />
           <span className="font-semibold text-gray-800">맛집 도우미</span>

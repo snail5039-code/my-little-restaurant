@@ -22,101 +22,90 @@ export function ChatbotWidget() {
   } = useChatbotStore();
 
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const characterRef = useRef<HTMLDivElement>(null);
+  // 실제로 드래그(이동)가 발생했는지 ref로 동기 추적 — 클릭 핸들러가 참조하는
+  // React state는 리렌더링을 거쳐야 갱신되므로, 빠른 클릭 시 mouseup이 먼저
+  // 발생해도 state가 아직 반영되지 않아 클릭이 무시되는 경쟁 상태를 피하기 위함
+  const wasDraggedRef = useRef(false);
 
   // Hydration 문제 해결
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 캐릭터 클릭: 채팅 열기/닫기 또는 클릭 카운트 증가 (드래그 중이 아닐 때만)
+  // 캐릭터 클릭: 채팅창 열기/닫기 토글 + 클릭할 때마다 대사 단계 진행
   const handleCharacterClick = () => {
-    if (isDragging) return; // 드래그 중이면 클릭 무시
+    if (wasDraggedRef.current) {
+      // 드래그 후 발생하는 클릭은 무시
+      wasDraggedRef.current = false;
+      return;
+    }
 
-    if (!isOpen) {
-      setIsOpen(true);
-      resetClickCount();
-    } else if (characterClickCount === 0) {
-      // 처음 클릭한 경우: 채팅창 닫기
-      setIsOpen(false);
-    } else {
-      // 이미 클릭했던 경우: 클릭 카운트 증가
-      incrementClickCount();
+    // 채팅창은 클릭할 때마다 열림/닫힘 토글
+    setIsOpen(!isOpen);
 
-      // 5번 이상 누르면 2초 뒤 숨김 상태 해제
-      if (characterClickCount >= 5) {
-        setTimeout(() => {
-          setIsHiding(false);
-          resetClickCount();
-        }, 2000);
-      }
+    // 클릭 카운트는 열림/닫힘과 무관하게 항상 증가 (대사 단계 진행)
+    incrementClickCount();
+
+    // 5번 이상 누르면 2초 뒤 숨김 상태 해제
+    if (characterClickCount >= 5) {
+      setTimeout(() => {
+        setIsHiding(false);
+        resetClickCount();
+      }, 2000);
     }
   };
 
-  // 마우스 다운: 드래그 시작
+  // 마우스 다운: 드래그 시작 (문서 리스너를 즉시 동기적으로 등록해 경쟁 상태 방지)
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isOpen) return; // 채팅창이 열려있으면 드래그 불가
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  };
 
-  // 마우스 무브: 캐릭터 위치 변경
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
+    wasDraggedRef.current = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let lastX = startX;
+    let lastY = startY;
+    let currentX = characterX;
+    let currentY = characterY;
 
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const movedX = Math.abs(moveEvent.clientX - startX);
+      const movedY = Math.abs(moveEvent.clientY - startY);
+
+      if (!wasDraggedRef.current && (movedX > 3 || movedY > 3)) {
+        wasDraggedRef.current = true;
+        setIsDragging(true);
+      }
+
+      if (!wasDraggedRef.current) return;
+
+      const deltaX = moveEvent.clientX - lastX;
+      const deltaY = moveEvent.clientY - lastY;
 
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
 
-      const newXPercent = (characterX * windowWidth) / 100 + deltaX;
-      const newYPercent = (characterY * windowHeight) / 100 + deltaY;
+      currentX = Math.max(0, Math.min(100, currentX + (deltaX / windowWidth) * 100));
+      currentY = Math.max(0, Math.min(100, currentY + (deltaY / windowHeight) * 100));
 
-      const newXValue = (newXPercent / windowWidth) * 100;
-      const newYValue = (newYPercent / windowHeight) * 100;
+      setCharacterX(currentX);
+      setCharacterY(currentY);
 
-      setCharacterX(newXValue);
-      setCharacterY(newYValue);
-      setDragStart({ x: e.clientX, y: e.clientY });
+      lastX = moveEvent.clientX;
+      lastY = moveEvent.clientY;
     };
 
     const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
       setIsDragging(false);
     };
 
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragStart, characterX, characterY, setCharacterX, setCharacterY]);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   if (!mounted) return null;
-
-  // 채팅창이 화면을 넘지 않도록 위치 계산
-  const getPanelPosition = () => {
-    const characterPercentX = characterX;
-    const characterPercentY = characterY;
-
-    // 패널을 캐릭터 왼쪽에 배치하되, 화면을 넘치지 않도록
-    const panelWidth = 384; // w-96 = 24rem = 384px
-    const panelHeight = 500; // 기본 높이
-
-    // 화면 우측에 캐릭터가 있으면 패널을 왼쪽에, 좌측에 있으면 오른쪽에
-    const isCharacterOnRight = characterPercentX > 50;
-
-    return {
-      left: isCharacterOnRight ? 'auto' : 'auto',
-      right: isCharacterOnRight ? '120px' : 'auto',
-    };
-  };
 
   return (
     <>
