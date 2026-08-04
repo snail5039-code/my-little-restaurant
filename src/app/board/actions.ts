@@ -58,6 +58,52 @@ export async function createPost(
   redirect(`/board/${data.id}`);
 }
 
+export async function updatePost(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const postId = formData.get("post_id");
+  const category = String(formData.get("category") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+
+  if (!postId) {
+    return { error: "잘못된 요청이에요." };
+  }
+  if (!CATEGORIES.some((c) => c.value === category)) {
+    return { error: "카테고리를 선택해주세요." };
+  }
+  if (!title) {
+    return { error: "제목을 입력해주세요." };
+  }
+  if (!content) {
+    return { error: "내용을 입력해주세요." };
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ category, title, content })
+    .eq("id", postId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: "수정 권한이 없거나 저장에 실패했어요." };
+  }
+
+  revalidatePath("/board");
+  revalidatePath(`/board/${postId}`);
+  return { success: true };
+}
+
 export async function deletePost(postId: number | string) {
   const supabase = await createClient();
   const {

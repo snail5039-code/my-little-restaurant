@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, type PostCategory } from "../constants";
 import DeletePostButton from "@/components/DeletePostButton";
+import EditPostModal from "@/components/EditPostModal";
 
 const CATEGORY_ICON: Record<PostCategory, typeof Megaphone> = {
   notice: Megaphone,
@@ -43,6 +44,7 @@ export default async function PostDetailPage({
     isAdmin = profile?.role === "admin";
   }
   const canDelete = !!user && (user.id === post.user_id || isAdmin);
+  const canEdit = !!user && user.id === post.user_id;
 
   const category = post.category as PostCategory;
   const Icon = CATEGORY_ICON[category];
@@ -79,7 +81,18 @@ export default async function PostDetailPage({
               })}
             </p>
           </div>
-          {canDelete && <DeletePostButton postId={post.id} />}
+          <div className="flex shrink-0 items-center">
+            {canEdit && (
+              <EditPostModal
+                postId={post.id}
+                isAdmin={isAdmin}
+                category={category}
+                title={post.title}
+                content={post.content}
+              />
+            )}
+            {canDelete && <DeletePostButton postId={post.id} />}
+          </div>
         </div>
 
         <div className="whitespace-pre-wrap px-5 py-5 text-[14px] leading-relaxed text-foreground">
